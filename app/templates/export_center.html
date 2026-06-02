@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form class="form-panel" method="post" action="/exports">
+  <label>
+    导出格式
+    <select name="export_format">
+      <option value="word">Word</option>
+      <option value="pdf">PDF</option>
+      <option value="word_pdf">Word + PDF</option>
+      <option value="markdown">Markdown 审阅版</option>
+      <option value="all">Word + PDF + Markdown</option>
+    </select>
+  </label>
+  <label class="check-row">
+    <input type="checkbox" name="watermark_enabled" value="true">
+    添加水印
+  </label>
+  <label>
+    水印文字
+    <input name="watermark_text" value="厂商查看">
+  </label>
+  <div class="actions">
+    <button type="submit">开始导出</button>
+    <a href="/">返回工作台</a>
+  </div>
+</form>
+{% endblock %}
