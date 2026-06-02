@@ -1,0 +1,3187 @@
+珠海超毅 EAP-EQP API 接口通讯规格书
+Version: 3.8
+文件名： EAP-EQP API接口通讯规格书
+Prepared By:  上海铠铂云信息科技有限公司
+文档变更记录
+[TABLE 35]
+日期 | 作者 | 版本号 | 变更内容
+2024-11-21 | 秦梓萌 | 1.01 | 初版建立
+2024-12-9 | 张涣化 | 1.0 | 初版更新
+2024-12-27 | 张涣化 | 1.0 | 初版更新
+2025-01-07 | 张涣化 | 1.1 | 初版更新
+2025-01-17 | 张涣化 | 1.2 | 初版更新
+2025-01-20 | 张涣化 | 1.3 | 删除EQP-EAP-004中JobID信息
+增加EAP-EQP-007接口中料号字段
+2025-02-11 | 谭明辉 | 1.4 | 1.新增16、17、18 3个接口
+2025-02-20 | 谭明辉 | 1.5 | 新增接口EQP-EAP-019
+修改接口EQP-EAP-006、EQP-EAP-017
+2025-03-06 | 谭明辉 | 1.6 | 新增接口EQP-EAP-020
+新增接口EQP-EAP-021
+新增接口EAP-EQP-009
+2025-03-16 | 谭明辉 | 1.7 | 修改接口EQP-EAP-008
+增加接口EQP-EAP-022
+修改接口EQP-EAP-009，更改接口与字段名称
+修改接口EQP-EAP-006，更新字段描述
+修改接口EQP-EAP-018
+2025-03-27 | 谭明辉 | 1.8 | EQP-EAP-001的IPAddress增加端口
+增加接口EQP-EAP-023、EAP-EQP-009
+修改接口EQP-EAP-020，增加任务名称字段
+2025-04-11 | 谭明辉 | 1.9 | 1.增加接口EQP-EAP-024、EAP-EQP-010
+2025-04-22 | 张涣化 | 2.0 | 增加接口EQP-EAP-025（压膜机扫描物料标签上报EAP）
+更新接口EQP-EAP-015，修改4.3备注
+2025-05-26 | 张涣化 | 2.1 | 1.修改EQP-EAP-015接口
+2025-05-30 | 谭明辉 | 2.2 | 1.增加EQP-EAP-026（料号校验）接口
+2025-6-13 | 王勇清 | 2.3 | 修改接口EQP-EAP-015，更改字段名称
+修改接口EQP-EAP-019，更改参数列表信息
+修改接口EQP-EAP-020，更改字段名称
+修改接口EAP-EQP-010，更改字段名称
+2025-7-28 | 黄文豪 | 2.5 | 修改EQP-EAP-017新增Name字段名称
+2. 新增EQP-EAP-027
+2025-8-13 | 黄文豪 | 2.6 | 1. 新增EQP-EAP-028
+2025-10-16 | 谭明辉 | 2.8 | 更新EQP-EAP-006描述
+更新EQP-EAP-022范例
+修改EAP-EQP-005增加JobId字段
+新增EQP-EAP-029
+2025-11-20 | 刘通哲 | 2.9 | 1. 更新EAP-EQP-008删除任务描述
+2. 更新EQP-EAP-009接口服务描述
+3. 新增EQP-EAP-030
+2025-12-3 | 谭明辉 | 3.0 | 1. 更新EAP-EQP-007增加载具类型字段
+2026-1-16 | 谭明辉 | 3.1 | 新增EAP-EQP-011 子任务下发、EQP-EAP-031 子任务完成上报
+2026-1-26 | 谭明辉 | 3.2 | 更新EQP-EAP-010增加PortId字段
+2026-1-30 | 谭明辉 | 3.3 | 新增EAP-EQP-012叠构信息下发接口
+2026-2-10 | 谭明辉 | 3.4 | 更新EQP-EAP-007增加NoRead
+2026-3-4 | 谭明辉 | 3.5 | 新增EQP-EAP-032
+更新EAP-EQP-007增加叠构信息与子任务信息字段
+删除EAP-EQP-011、EAP-EQP-012接口
+2026-3-23 | 谭明辉 | 3.6 | EQP-EAP-005增加Ext字段
+2026-4-16 | 谭明辉 | 3.7 | 新增EQP-EAP-033 管位带/钻带资料请求接口
+新增EQP-EAP-034 By PNL上传钻带资料路径信息接口
+新增EQP-EAP-035 背钻每趟做完后上报完工信息接口
+2026-5-25 | 谭明辉 | 3.8 | 更新EQP-EAP-033增加返回值DrlParam 
+新增EQP-EAP-036 CT检查机制程数据报告
+拆分拆分子任务接口为单独接口EAP-EQP-011 子任务信息下发
+一、文档概述
+本文档为铠铂 EAP 系统(EAP)与设备(以下简称 EQP)进行业务数据传输与回传接口文档 ， EAP 系统与 EQP 对接时需按照本文档的规范进行接口开发配置。
+二、 约定
+EAP 系统与设备相互集成接口统一采用 Restful WebAPI 接口方式，请求方式为 POST，请求和响应的主体是 JSON 结构，使用的编码是 UTF-8；具体定义如下所示：
+[TABLE 47]
+接口方式 | Restful WebAPI ，基于 Http 协议开发
+请求方式 | POST
+Content-Type | application/json
+编码规则 | UTF-8
+安全验证 | 安全验证
+请求方 IP 地址 | 通过解析 HttpRequest 获取请求方 IP 地址，系统判断请求方 IP 地址是否在白名单
+1.接口参数定义：
+a)输入参数：即接口请求时输入参数，指接口调用时的输入参数，采用 JsonObject 格式，参数如果为主从表，则采用 Json 嵌套数组结构；
+b)返回值参数：即接口调用返回值参数，指接口调用时的返回值，采用 JsonObject 格式；
+2.基础访问地址：
+[TABLE 52]
+ | 参数 | 参数描述
+EAP 系统 | base_url | http://ip:Port/api/EQP_AliveCheck
+EAP 系统 | ip | 系统上线后才能给出
+EAP 系统 | port | 系统上线后才能给出
+设备 | base_url | http://ip:port/api/ EAP_InitialDataRequest
+设备 | ip | 设备定义
+设备 | port | 设备定义
+三、 接口内容
+1. EQP -> EAP 接口
+EQP-EAP-001 连线检查
+[TABLE 58]
+需求说明 | EQP 检查与 EAP 是否连线 | EQP 检查与 EAP 是否连线 | EQP 检查与 EAP 是否连线
+使用场景 | EQP 对 EAP 定时检查联机，频率（60 秒/次） | EQP 对 EAP 定时检查联机，频率（60 秒/次） | EQP 对 EAP 定时检查联机，频率（60 秒/次）
+接口名称 | EQP_AliveCheck | EQP_AliveCheck | EQP_AliveCheck
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | EQP 检查与 EAP 是否连线
+请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | IPAddress | string | 设备 IP：端口
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 60]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_AliveCheck
+{
+    "From": "EQP",
+    "Message": "EQP_AliveCheck",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "IPAddress": "127.0.0.1:8080"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-002 设备状态上报
+[TABLE 63]
+需求说明 | 设备状态上报 | 设备状态上报 | 设备状态上报
+使用场景 | 设备状态发生变化时， 上报到 EAP 系统记录 | 设备状态发生变化时， 上报到 EAP 系统记录 | 设备状态发生变化时， 上报到 EAP 系统记录
+接口名称 | EQP_EquipmentCurrentStatus | EQP_EquipmentCurrentStatus | EQP_EquipmentCurrentStatus
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备状态上报
+请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | EqpStatus | string | 设备状态：
+Run： 运行
+Pause： 暂停
+Idle： 待机
+Down：故障
+PM： 保养
+Ready： 准备
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 65]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_EquipmentCurrentStatus
+{
+    "From": "EQP",
+    "Message": "EQP_EquipmentCurrentStatus",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "EqpStatus": "Run"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-003 设备当前控制模式上报
+[TABLE 67]
+需求说明 | 设备当前控制模式上报 | 设备当前控制模式上报 | 设备当前控制模式上报
+使用场景 | 当EAP下发ControlModeCommand命令时，设备切换成相应的模式，通知EAP切换完成；
+设备也可以自行手动切换模式，切换完成后，通知EAP切换完成； | 当EAP下发ControlModeCommand命令时，设备切换成相应的模式，通知EAP切换完成；
+设备也可以自行手动切换模式，切换完成后，通知EAP切换完成； | 当EAP下发ControlModeCommand命令时，设备切换成相应的模式，通知EAP切换完成；
+设备也可以自行手动切换模式，切换完成后，通知EAP切换完成；
+接口名称 | EQP_EquipmentControlMode | EQP_EquipmentControlMode | EQP_EquipmentControlMode
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备控制模式上报
+请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | ControlMode | string | 设备控制模式：
+Local ：离线本地模式
+Remote ：在线远程模式
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 69]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_EquipmentControlMode
+{
+    "From": "EQP",
+    "Message": "EQP_EquipmentControlMode",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "ControlMode": "Remote"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-004 设备警报上报
+[TABLE 71]
+需求说明 | 设备警报上报 | 设备警报上报 | 设备警报上报
+使用场景 | 设备警报发生或解除时，根据用户定义的警报信息进行上报 | 设备警报发生或解除时，根据用户定义的警报信息进行上报 | 设备警报发生或解除时，根据用户定义的警报信息进行上报
+接口名称 | EQP_EquipmentAlarmReport | EQP_EquipmentAlarmReport | EQP_EquipmentAlarmReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备警报上报
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | ReportType | string | 警报状态：
+Reset:警报清除
+Occur:警报发生
+4.3 | AlarmType | string | 警报类型：
+S: 重大
+L: 一般
+W：预警
+4.4 | AlarmCode | string | 警报代码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 74]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_EquipmentAlarmReport
+{
+    "From": "EQP",
+    "Message": "EQP_EquipmentAlarmReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "ReportType": "Occur",
+        "AlarmType": "S",
+        "AlarmCode": "A0001"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-005 设备任务进展信息上报
+[TABLE 76]
+需求说明 | 设备任务进展信息上报 | 设备任务进展信息上报 | 设备任务进展信息上报
+使用场景 | 1.当EAP下发生产任务时，设备创建任务完成后通知EAP；
+2.当EAP通知设备更新任务时，设备更新任务完成后通知EAP；
+3.当EAP下发生产任务时，设备切换任务失败后通知EAP；
+4.当任务生产开始时，设备开始投板时通知EAP；
+5.当任务生产结束时，设备结束投板时通知EAP； | 1.当EAP下发生产任务时，设备创建任务完成后通知EAP；
+2.当EAP通知设备更新任务时，设备更新任务完成后通知EAP；
+3.当EAP下发生产任务时，设备切换任务失败后通知EAP；
+4.当任务生产开始时，设备开始投板时通知EAP；
+5.当任务生产结束时，设备结束投板时通知EAP； | 1.当EAP下发生产任务时，设备创建任务完成后通知EAP；
+2.当EAP通知设备更新任务时，设备更新任务完成后通知EAP；
+3.当EAP下发生产任务时，设备切换任务失败后通知EAP；
+4.当任务生产开始时，设备开始投板时通知EAP；
+5.当任务生产结束时，设备结束投板时通知EAP；
+接口名称 | EQP_EquipmentJobDataProcessReport | EQP_EquipmentJobDataProcessReport | EQP_EquipmentJobDataProcessReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备任务进程上报
+请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备ID
+4.2 | JobId | string | 任务ID
+4.3 | TotalCount | int | 任务总数量
+4.4 | OkCount | int | 任务生产OK板数量
+4.5 | ProcessCode | string | 任务状态：
+Create:  创建任务
+Update：更新任务
+Failed：执行任务失败
+Delete：删除任务
+Start ：开始生产
+End：生产结束
+4.6 | Ext | ExtInfo | 扩展信息（可选，仅在特定场景使用）
+ExtInfo（高压测试机生产结束时上报） | ExtInfo（高压测试机生产结束时上报） | ExtInfo（高压测试机生产结束时上报） | ExtInfo（高压测试机生产结束时上报）
+4.6.1 | NgPanelList | List<NgPanel> | 高压失败的Panel列表
+NgPanel | NgPanel | NgPanel | NgPanel
+4.6.1.1 | PanelId | string | 产品序列码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 78]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_EquipmentJobDataProcessReport
+{
+    "From": "EQP",
+    "Message": "EQP_EquipmentJobDataProcessReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "JobId": "Lot01",
+        "TotalCount": 120,
+        "OkCount": 115,
+        "ProcessCode": "End",
+        "Ext": {
+            "NgPanelList": [
+                {
+                    "PanelId": "Panel001"
+                },
+                {
+                    "PanelId": "Panel005"
+                }
+            ]
+        }
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-006 设备上下料端口状态上报
+[TABLE 80]
+需求说明 | 设备上报上下料端口状态 | 设备上报上下料端口状态 | 设备上报上下料端口状态
+使用场景 | 当投收板机端口状态发生变化时（上料请求、上料完成、下料请求、下料完成）通知EAP（投收板机的上料请求、下料请求需要加上轮循时间，时间可设定，默认：2min）；
+上料请求：投板机请求叫满载，收板机请求叫空托盘；
+上料完成：投板机上满载完成，收板机上托盘完成；
+下料请求：投板机请求下空托盘，收板机请求下满载；
+下料完成：投板机下空托盘完成，收板机下满载完成； | 当投收板机端口状态发生变化时（上料请求、上料完成、下料请求、下料完成）通知EAP（投收板机的上料请求、下料请求需要加上轮循时间，时间可设定，默认：2min）；
+上料请求：投板机请求叫满载，收板机请求叫空托盘；
+上料完成：投板机上满载完成，收板机上托盘完成；
+下料请求：投板机请求下空托盘，收板机请求下满载；
+下料完成：投板机下空托盘完成，收板机下满载完成； | 当投收板机端口状态发生变化时（上料请求、上料完成、下料请求、下料完成）通知EAP（投收板机的上料请求、下料请求需要加上轮循时间，时间可设定，默认：2min）；
+上料请求：投板机请求叫满载，收板机请求叫空托盘；
+上料完成：投板机上满载完成，收板机上托盘完成；
+下料请求：投板机请求下空托盘，收板机请求下满载；
+下料完成：投板机下空托盘完成，收板机下满载完成；
+接口名称 | EQP_PortStatusReport | EQP_PortStatusReport | EQP_PortStatusReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备上报上下料端口状态
+请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备ID
+4.2 | PortId | string | 设备端口ID
+一般L：表示投板机Port信息，U：表示收板机Port信息
+L01：上料口#1（上料位#1）
+L02：上料口#2（上料位#2）
+L03：上料口#3（上料位#3）
+...
+U01：上料口#1（下料位#1）
+U02：上料口#2（下料位#2）
+U03：上料口#3（下料位#3）
+U04：上料口#4（下料位#4）
+4.3 | PortStatus | string | 端口状态：
+LoadRequest：请求上料（会返回设备LotId）
+LoadComplete：上料完成
+UnloadRequest：请求下料（需上报PanelList）
+UnloadComplete：下料完成
+4.4 | CarrierId | string | 载具ID
+*当PortStatus端口状态为：“上料完成”、“下料请求”、“下料完成”时填写此字段内容
+4.5 | JobId | string | 任务ID；
+*当投板机PortStatus端口状态为：“上料完成”时填写此字段内容
+*当收板机PortStatus端口状态为：“下料请求”、“下料完成”时填写此字段内容
+4.6 | OkCount | int | 实际OK板数量；
+*当PortStatus端口状态为：“下料请求”、“下料完成”时填写此字段内容
+4.7 | PanelList | List<string> | PNL列表，例如：["Panel001","Panel002"]
+*当PortStatus端口状态为：“下料请求”时填写此字段内容
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | LotId | string | 工单批次号（设备请求上料时EAP回复设备）
+[TABLE 82]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_PortStatusReport
+{
+    "From": "EQP",
+    "Message": "EQP_PortStatusReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "PortId": "L01",
+        "PortStatus": "LoadRequest",
+"CarrierId": "carrier001",
+        "JobId": "LotID001",
+"OkCount": 144,
+"PanelList": ["Panel001","Panel002"]
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+"Content": {
+"LotId": "001"
+”},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-007 设备读PNL码上报
+[TABLE 85]
+需求说明 | 设备读码器读码上报 | 设备读码器读码上报 | 设备读码器读码上报
+使用场景 | 设备读码器读码整合上报到EAP（不接受EAP单独整合设备读头） | 设备读码器读码整合上报到EAP（不接受EAP单独整合设备读头） | 设备读码器读码整合上报到EAP（不接受EAP单独整合设备读头）
+接口名称 | EQP_PanelReadReport | EQP_PanelReadReport | EQP_PanelReadReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备将读到的 Panel码信息上报到 EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | PanelId | string | CCD读到产品序列码
+*读取失败固定为ERROR
+4.3 | PanelResult | string | OK：存在EAP下发的PanelList中
+NG：不存在EAP下发的PanelList中
+NoRead：未读到码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 88]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_PanelReadReport
+{
+    "From": "EQP",
+    "Message": "EQP_PanelReadReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "PanelId": "panel0001",
+        "PanelResult": "OK"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-008 PNL绑定信息上报
+[TABLE 91]
+需求说明 | 产品有做绑定动作时上报 | 产品有做绑定动作时上报 | 产品有做绑定动作时上报
+使用场景 | 1.熔合/铆合设备齐套时，上报内层齐套的PanelID绑定关系 | 1.熔合/铆合设备齐套时，上报内层齐套的PanelID绑定关系 | 1.熔合/铆合设备齐套时，上报内层齐套的PanelID绑定关系
+接口名称 | EQP_PanelBindingReport | EQP_PanelBindingReport | EQP_PanelBindingReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备将 Panel 码绑定关系上报到 EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | PanelList | List<PanelBinding> | 每套PNL信息列表
+4.4 | ProcessDataList | List<ProcessData> | 生产参数列表
+PanelBinding | PanelBinding | PanelBinding | PanelBinding
+4.3.1 | PanelIdList | List<string> | 产品序列码
+ProcessData | ProcessData | ProcessData | ProcessData
+4.4.1 | ItemName | string | 参数名称
+4.4.2 | ItemValue | string | 参数值
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 93]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_PanelBindingReport
+{
+    "From": "EQP",
+    "Message": "EQP_PanelBindingReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "JobId": "Lot01",
+        "PanelList": [
+            {
+                "PanelIdList": [
+                    "Panel001",
+                    "Panel002",
+                    "Panel003"
+                ]
+            },
+            {
+                "PanelIdList": [
+                    "Panel004",
+                    "Panel005",
+                    "Panel006"
+                ]
+            }
+        ],
+        "ProcessDataList": [
+            {
+                "ItemName": "L1",
+                "ItemValue": "20"
+            },
+            {
+                "ItemName": "L2",
+                "ItemValue": "30"
+            },            {
+                "ItemName": "L3",
+                "ItemValue": "40"
+            }
+        ]
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-009 设备制程/量测数据报告
+[TABLE 95]
+需求说明 | 设备制程/量测数据报告 | 设备制程/量测数据报告 | 设备制程/量测数据报告
+使用场景 | 设备By Lot/Panel /趟 上报量测数据（By 趟：一般钻机生产一次）； | 设备By Lot/Panel /趟 上报量测数据（By 趟：一般钻机生产一次）； | 设备By Lot/Panel /趟 上报量测数据（By 趟：一般钻机生产一次）；
+接口名称 | EQP_ProcessDataReport | EQP_ProcessDataReport | EQP_ProcessDataReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备制程/量测数据报告（上传失败需要重试）
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务ID，
+*若无任务信息，此字段为空
+4.3 | PanelId | string | 读码器读到的产品序列码
+*若无读码信息，此字段为空
+4.4 | Pn | string | 产品料号
+4.5 | ProcDataList | List<ProcessData> | 制程/量测参数列表
+ProcessData | ProcessData | ProcessData | ProcessData
+4.5.1 | ItemName | string | 参数名称
+4.5.2 | ItemValue | string | 参数值
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 97]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_ProcessDataReport
+{
+    "From": "EQP",
+    "Message": "EQP_ProcessDataReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "JobId": "Lot01",
+        "PanelId": "panel001",
+"Pn": "Pn001",
+        "ProcDataList": [
+            {
+                "ItemName": "P0001",
+                "ItemValue": "2"
+            },
+            {
+                "ItemName": "P0002",
+                "ItemValue": "2"
+            }
+        ]
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-010 扫码枪扫描二维码信息上报
+[TABLE 99]
+需求说明 | 设备扫码枪读取（载具、Lot卡、PNL）二维码信息时，需上报二维码信息到EAP | 设备扫码枪读取（载具、Lot卡、PNL）二维码信息时，需上报二维码信息到EAP | 设备扫码枪读取（载具、Lot卡、PNL）二维码信息时，需上报二维码信息到EAP
+使用场景 | ※设备需要配备扫码枪
+1.当扫码枪扫到载具二维码（CarrierId）时，上报二维码信息到EAP
+当扫码枪扫到Lot卡二维码（LotId）时，上报二维码信息到EAP
+当扫码枪扫到PNL二维码（PanelId）时，上报二维码信息到EAP
+当扫码枪扫到物料二维码（油墨、干膜）时，上报二维码信息到EAP | ※设备需要配备扫码枪
+1.当扫码枪扫到载具二维码（CarrierId）时，上报二维码信息到EAP
+当扫码枪扫到Lot卡二维码（LotId）时，上报二维码信息到EAP
+当扫码枪扫到PNL二维码（PanelId）时，上报二维码信息到EAP
+当扫码枪扫到物料二维码（油墨、干膜）时，上报二维码信息到EAP | ※设备需要配备扫码枪
+1.当扫码枪扫到载具二维码（CarrierId）时，上报二维码信息到EAP
+当扫码枪扫到Lot卡二维码（LotId）时，上报二维码信息到EAP
+当扫码枪扫到PNL二维码（PanelId）时，上报二维码信息到EAP
+当扫码枪扫到物料二维码（油墨、干膜）时，上报二维码信息到EAP
+接口名称 | EQP_QRCodeReadReport | EQP_QRCodeReadReport | EQP_QRCodeReadReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备扫码枪读取（载具、Lot卡、PNL、物料）二维码信息上报到EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | QRCode | string | 扫码枪扫到
+->载具二维码（CarrierId）
+->Lot卡二维码（LotId）
+->PNL二维码（PanelId）
+->物料二维码（MaterialId）
+*读取失败固定为ERROR
+4.3 | PortId | string | 设备端口ID（无Port则为空）
+一般L：表示投板机Port信息，U：表示收板机Port信息
+L01：上料口#1（上料位#1）
+L02：上料口#2（上料位#2）
+L03：上料口#3（上料位#3）
+...
+U01：上料口#1（下料位#1）
+U02：上料口#2（下料位#2）
+U03：上料口#3（下料位#3）
+U04：上料口#4（下料位#4）
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 102]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_QRCodeReadReport
+{
+    "From": "EQP",
+    "Message": "EQP_QRCodeReadReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "QRCode": "Carrier001",
+“PortId”:”L01”
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-011 底盘或治具身份信息上报
+[TABLE 104]
+需求说明 | 压合回流线底盘信息或治具信息绑定/解绑上报 | 压合回流线底盘信息或治具信息绑定/解绑上报 | 压合回流线底盘信息或治具信息绑定/解绑上报
+使用场景 | 设备读取底盘身份二维码上报EAP（主要应用于压合回流线）
+设备读取治具身份二维码（网版、菲林、测试架等）及状态上报EAP | 设备读取底盘身份二维码上报EAP（主要应用于压合回流线）
+设备读取治具身份二维码（网版、菲林、测试架等）及状态上报EAP | 设备读取底盘身份二维码上报EAP（主要应用于压合回流线）
+设备读取治具身份二维码（网版、菲林、测试架等）及状态上报EAP
+接口名称 | EQP_TrayStatusReport | EQP_TrayStatusReport | EQP_TrayStatusReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 压合回流线底盘信息或治具信息绑定/解绑上报
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+*若无任务信息则此字段为空
+4.3 | TrayId | string | 底盘ID或治具ID
+4.4 | TrayStatus | string | 底盘/治具状态：
+Bind：绑定；
+Unbind：解绑；
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 106]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_TrayStatusReport
+{
+    "From": "EQP",
+    "Message": "EQP_TrayStatusReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "JobId": "Lot01",
+        "TrayId": "Tray01",
+        "TrayStatus": "Bind"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-012 打靶机上报涨缩信息
+[TABLE 108]
+需求说明 | 打靶机By Panel上报涨缩信息 | 打靶机By Panel上报涨缩信息 | 打靶机By Panel上报涨缩信息
+使用场景 | 打靶机By Panel上报涨缩信息 | 打靶机By Panel上报涨缩信息 | 打靶机By Panel上报涨缩信息
+接口名称 | EQP_ScalingFactorInfoReport | EQP_ScalingFactorInfoReport | EQP_ScalingFactorInfoReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 打靶机By Lot上报涨缩信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备  ID
+4.2 | JobId | string | 任务名称
+4.3 | RangeValue | string | N：正常区间
+ Z：涨值区间
+ S：缩值区间
+4.4 | PanelId | string | 产品序列码
+4.5 | PanelXValue | string | X横向涨缩值
+4.6 | PanelYValue | string | Y纵向涨缩值
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 111]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_ScalingFactorInfoReport
+{
+	"From": "EQP",
+	"Message": "EQP_ScalingFactorInfoReport",
+	"DateTime": "2024/11/27 15:00:00",
+	"Content": {
+		"EqpId": "EQ01",
+		"JobId": "Lot01",
+		"RangeValue": "N",
+		"PanelId": "Panel001",
+		"PanelXValue": "0.3",
+"PanelYValue": "0.3"
+	},
+	"RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-013 By飞靶上报每个药水槽进出时间的相关信息
+[TABLE 113]
+需求说明 | By飞靶上报每个药水槽进出时间的相关信息 | By飞靶上报每个药水槽进出时间的相关信息 | By飞靶上报每个药水槽进出时间的相关信息
+使用场景 | 全板电镀By飞靶上报每个药水槽进出时间的相关信息
+图形电镀By飞靶上报每个药水槽进出时间的相关信息
+化金线By飞靶上报每个药水槽进出时间的相关信息 | 全板电镀By飞靶上报每个药水槽进出时间的相关信息
+图形电镀By飞靶上报每个药水槽进出时间的相关信息
+化金线By飞靶上报每个药水槽进出时间的相关信息 | 全板电镀By飞靶上报每个药水槽进出时间的相关信息
+图形电镀By飞靶上报每个药水槽进出时间的相关信息
+化金线By飞靶上报每个药水槽进出时间的相关信息
+接口名称 | EQP_PotionTankInfoReport | EQP_PotionTankInfoReport | EQP_PotionTankInfoReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 化金线By飞靶上报每个药水槽进出时间的相关信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备  ID
+4.2 | JobId | string | 任务名称
+4.3 | FrybaId | string | 飞巴ID
+4.4 | PanelList | List<string> | PNL列表，例如：["Panel001","Panel002"]
+4.5 | PotionDataList | List<PotionData> | 制程/量测参数列表
+PotionData | PotionData | PotionData | PotionData
+4.4.1 | PotionTank | string | 药水槽号
+4.4.2 | StartTime | string | 进入药水槽开始时间，格式”yyyyMMdd HHmmss”
+4.4.3 | EndTime | string | 进入药水槽结束时间，格式”yyyyMMdd HHmmss”
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 116]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_PotionTankInfoReport
+{
+  "From": "EQP",
+  "Message": "EQP_PotionTankInfoReport",
+  "DateTime": "2024/11/27 15:00:00",
+  "Content": {
+    "EqpId": "EQ01",
+    "JobId": "Lot01",
+    "FrybaId": "Fryba001",
+    "PanelList": [
+      "Panel001",
+      "Panel002"
+    ],
+    "PotionDataList": [
+      {
+        "PotionTank": "Potion01",
+        "StartTime": "20241128104123",
+        "EndTime": "20241128114556"
+      },
+      {
+        "PotionTank": "Potion02",
+        "StartTime": "20241128104123",
+        "EndTime": "20241128114556"
+      }
+    ]
+  },
+  "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-014 内外层PanelID绑定关系上报
+[TABLE 119]
+需求说明 | 内外层PanelID绑定关系上报 | 内外层PanelID绑定关系上报 | 内外层PanelID绑定关系上报
+使用场景 | 内外层PanelID绑定关系上报 | 内外层PanelID绑定关系上报 | 内外层PanelID绑定关系上报
+接口名称 | EQP_ InnerOuterBindingReport | EQP_ InnerOuterBindingReport | EQP_ InnerOuterBindingReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 内外层PanelID绑定关系上报
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | InPanelId | string | 内层PanelID
+4.3 | OutPanelId | string | 外层PanelID
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 121]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_InnerOuterBindingReport
+{
+    "From": "EQP",
+    "Message": "EQP_InnerOuterBindingReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+             "EqpId": "EQ01",
+             "Out_panel_ID": "OutPanel001",
+              "In_panel_ID": "InPanel001"
+    },
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+    "Content": {},
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-015 上报PNL获取Set/Pcs
+[TABLE 125]
+需求说明 | 喷印机By Panel获取Set/Pcs信息 | 喷印机By Panel获取Set/Pcs信息 | 喷印机By Panel获取Set/Pcs信息
+使用场景 | 喷印机By Panel获取Set/Pcs信息 | 喷印机By Panel获取Set/Pcs信息 | 喷印机By Panel获取Set/Pcs信息
+接口名称 | EQP_ GetSetOrPcsInfo | EQP_ GetSetOrPcsInfo | EQP_ GetSetOrPcsInfo
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 喷印机By Panel获取Set/Pcs信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | PNLID | string | 编码信息
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | SET | List<Set> | Set集合(panel to set 返回)
+5.2 | PCS | List<Pcs> | Pcs集合(set to pcs 返回)
+5.3 | Coupons | List<Coupon> | Coupon集合
+Set | Set | Set | Set
+5.1.1 | Type | string | 码类型(如二维码、明码、明码2)
+5.1.2 | Face | string | 面次：Top、Bot
+5.1.3 | Value | string | 喷码内容
+Pcs | Pcs | Pcs | Pcs
+5.2.1 | Type | string | 码类型(如二维码、明码、明码2)
+5.2.2 | Face | string | 面次：Top、Bot
+5.2.3 | Value | string | 喷码内容
+Coupon | Coupon | Coupon | Coupon
+5.3.1 | Type | string | 码类型(如二维码、明码、明码2)
+5.3.2 | Face | string | 面次：Top、Bot
+5.3.3 | Value | string | 喷码内容
+[TABLE 127]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_GetPanelOrSetInfo
+{
+  "From": "EQP",
+  "Message": "EQP_GetPanelOrSetInfo",
+  "DateTime": "2024/11/27 15:00:00",
+  "Content": {
+    "EqpId": "EQ01",
+    "JobId": "Lot01",
+"PNLId":" Code1"
+  },
+  "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+日志范例 | 应答 | {
+	"Code": "0000",
+	"Success": true,
+	"Msg": " ",
+	"DateTime": "20241127150000",
+	"Content": {
+		"SET": [{
+				"Type": "PlainCode", 
+				"Face": "Top",
+				"Value": "111"
+			},
+			{
+				"Type": "QRcode",    
+				"Face": "Bot",
+				"Value": "222"
+			}
+		],
+		"PCS": [{
+				"Type": "PlainCode", 
+				"Face": "Top",
+				"Value": "333"
+			},
+			{
+				"Type": "QRcode",
+				"Face": "Bot",
+				"Value": "444"
+			}
+		],
+		"Coupons": [{
+				"Type": "PlainCode",
+				"Face": "Top",
+				"Value": "555"
+			},
+			{
+				"Type": "QRcode",
+				"Face": "Bot",
+				"Value": "666"
+			}
+		]
+	},
+	"RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-016 小板件读码上报
+[TABLE 130]
+需求说明 | 成型后小板件读码上报 | 成型后小板件读码上报 | 成型后小板件读码上报
+使用场景 | 成型后小板件读码上报 | 成型后小板件读码上报 | 成型后小板件读码上报
+接口名称 | EQP_ BoardInfoReport | EQP_ BoardInfoReport | EQP_ BoardInfoReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 成型后小板件读码上报
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | Boards | List<string> | 小板件ID
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 132]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_BoardInfoReport
+{
+    "From": "EQP",
+    "Message": "EQP_BoardInfoReport",
+    "DateTime": "20241127150000",
+    "Content": {
+        "EqpId": "EQ01",
+        "Boards": [
+            "id1",
+            "id2"
+        ]
+    },
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+    "Content": {},
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-017 设备请求身份信息
+[TABLE 135]
+需求说明 | 设备请求身份信息，获取身份信息与权限 | 设备请求身份信息，获取身份信息与权限 | 设备请求身份信息，获取身份信息与权限 | 设备请求身份信息，获取身份信息与权限
+使用场景 | 设备请求身份信息，获取身份信息与权限 | 设备请求身份信息，获取身份信息与权限 | 设备请求身份信息，获取身份信息与权限 | 设备请求身份信息，获取身份信息与权限
+接口名称 | EQP_ IcCodeReport | EQP_ IcCodeReport | EQP_ IcCodeReport | EQP_ IcCodeReport
+接口方式 | 接口调用方 | 接口提供方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | EAP | 设备请求身份信息，获取身份信息与权限
+参数列表 | 参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 类型 | 描述
+1 | From | string | string | 调用接口来源（EQP）
+2 | Message | string | string | 消息（接口名）
+3 | DateTime | string | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+4 | Content | object | object | 参数内容
+5 | RequestId | string | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content | Content
+4.1 | EqpId | string | string | 设备 ID
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 类型 | 描述
+1 | Code | string | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | bool | 执行成功与否
+3 | Msg | string | string | 错误讯息
+4 | DateTime | string | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+5 | Content | object | object | 空
+6 | RequestId | string | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content | Content
+5.1 | AccountList | List<Account> | 账户列表 | 账户列表
+Account | Account | Account | Account | Account
+5.1 | UserName | String | 账号 | 账号
+5.2 | Name | String | 姓名 | 姓名
+5.3 | Permission | Int | 权限(1.操作员，2.工程师，3.管理员) | 权限(1.操作员，2.工程师，3.管理员)
+5.4 | Password | String | 密码 | 密码
+ss
+[TABLE 137]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_IcCodeReport
+{
+    "From": "EQP",
+    "Message": "EQP_IcCodeReport",
+    "DateTime": "20241127150000",
+    "Content": {
+             "EqpId": "EQ01"
+    },
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+"Content": {
+    "AccountList": [
+        {
+            " UserName": "user1",
+            “Name”:”某某”，
+            “Permission”:1，
+            " Password": "psw1",
+        }
+    ]},
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-018 钻机读铝片码上报
+[TABLE 140]
+需求说明 | 钻机读码校验 | 钻机读码校验 | 钻机读码校验
+使用场景 | 钻机开始生产前扫描铝片码上报EAP判断是否允许生产 | 钻机开始生产前扫描铝片码上报EAP判断是否允许生产 | 钻机开始生产前扫描铝片码上报EAP判断是否允许生产
+接口名称 | EQP_AluminiumSheetCodeCheck | EQP_AluminiumSheetCodeCheck | EQP_AluminiumSheetCodeCheck
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备将读到的铝片码信息，产品信息，涨缩信息上报到 EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | AluminiumList | List<AluminiumInfo> | 铝片信息列表
+AluminiumInfo | AluminiumInfo | AluminiumInfo | AluminiumInfo
+4.2.1 | AxleCode | string | 轴号
+4.2.2 | AluminiumId | string | 铝片码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 142]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_AluminiumSheetCodeCheck
+{
+  "From": "EQP",
+  "Message": "EQP_AluminiumSheetCodeCheck",
+  "DateTime": "2024/11/27 15:00:00",
+  "Content": {
+    "EqpId": "EQ01",
+    "AluminiumList": [
+      {
+        "AxleCode": "1",
+        "AluminiumId": "A1"
+      },
+      {
+        "AxleCode": "2",
+        "AluminiumId": "A2"
+      }
+    ]
+  },
+  "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-019 检测信息上报
+[TABLE 144]
+需求说明 | 检测设备上报检查信息 | 检测设备上报检查信息 | 检测设备上报检查信息
+使用场景 | 检测设备上报检查信息 | 检测设备上报检查信息 | 检测设备上报检查信息
+接口名称 | EQP_DetectionInfoReport | EQP_DetectionInfoReport | EQP_DetectionInfoReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 检测设备上报检查信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | Operator | string | 操作员
+4.3 | DetectionList | List<Detection> | 检测列表
+Detection | Detection | Detection | Detection
+4.3.1 | DetectionDataList | List<DetectionData> | 检测信息内容
+DetectionData | DetectionData | DetectionData | DetectionData
+4.3.1.1 | ItemName | string | 参数名称
+4.3.1.2 | ItemValue | string | 参数值
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 146]
+日志范例 | 请求 | REST:POST http://IP:Port/api/ EQP_DetectionInfoReport
+{
+  "From": "EQP",
+  "Message": "EQP_DetectionInfoReport",
+  "DateTime": "20241127150000",
+  "Content": {
+    "EqpId": "EQ01",
+    "Operator": "User1",
+    "DetectionList": [{
+        "DetectionDataList": [ {
+            "ItemName": "A",
+            "ItemValue": "1"
+          },
+          {
+            "ItemName": "B",
+            "ItemValue": "2"
+          }]
+      },
+      {
+        "DetectionDataList": [
+          {
+            "ItemName": "C",
+            "ItemValue": "1"
+          },
+          {
+            "ItemName": "D",
+            "ItemValue": "2"
+          }]
+      }]
+  },
+  "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-020 读内层码请求外层码
+[TABLE 148]
+需求说明 | 读内层码请求外层码 | 读内层码请求外层码 | 读内层码请求外层码
+使用场景 | 读内层码请求外层码 | 读内层码请求外层码 | 读内层码请求外层码
+接口名称 | EQP_ InnerGetOuterReport | EQP_ InnerGetOuterReport | EQP_ InnerGetOuterReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 读内层码请求外层码
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | InPanelId | string | 内层PanelID
+4.3 | JobId | string | 任务名称
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | OuPanelId | string | 外层PanelId
+[TABLE 150]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_InnerGetOuterReport
+{
+  "From": "EQP",
+  "Message": "EQP_ InnerGetOuterReport",
+  "DateTime": "20241127150000",
+  "Content": {
+    "EqpId": "EQ01",
+    "InPanelId": "InPanel001",
+    "JobId": "Lot01"
+  },
+  "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+    "Content": {
+             "OuPanelId": "OutPanel001",
+},
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-021 药水添加信息上报
+[TABLE 152]
+需求说明 | 药水添加信息上报 | 药水添加信息上报 | 药水添加信息上报
+使用场景 | 采集设备药水的添加时间与次数 | 采集设备药水的添加时间与次数 | 采集设备药水的添加时间与次数
+接口名称 | EQP_LiquidInfoReport | EQP_LiquidInfoReport | EQP_LiquidInfoReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 采集设备药水的添加信息上报到 EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | LiquidDate | DateTime | 药水添加时间（格式：yyyy/MM/dd HH:mm:ss）
+4.3 | LiquidNumber | string | 药水添加次数
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 154]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_LiquidInfoReport
+{
+    "From": "EQP",
+    "Message": "EQP_LiquidInfoReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "LiquidDate": "yyyy/MM/dd HH:mm:ss",
+        "LiquidNumber": "1"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-022 询问是否允许投板
+[TABLE 156]
+需求说明 | 投板机向EAP询问是否允许投板 | 投板机向EAP询问是否允许投板 | 投板机向EAP询问是否允许投板
+使用场景 | 投板机向EAP询问是否允许投板 | 投板机向EAP询问是否允许投板 | 投板机向EAP询问是否允许投板
+接口名称 | EQP_IsProductionAllowed | EQP_IsProductionAllowed | EQP_IsProductionAllowed
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 投板机向EAP询问是否允许投板
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | LotId | string | 工单批次号
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | Result | string | 回复结果（OK/NG）
+[TABLE 158]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_IsProductionAllowed
+{
+    "From": "EQP",
+    "Message": "EQP_IsProductionAllowed",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+      “LotId” : ”Lot01”
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+"Content": {
+“Result”:”OK”
+},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-023 裁切任务完成
+[TABLE 160]
+需求说明 | PP裁切任务完成上报 | PP裁切任务完成上报 | PP裁切任务完成上报
+使用场景 | PP裁切任务完成上报 | PP裁切任务完成上报 | PP裁切任务完成上报
+接口名称 | EQP_PPCuttingComplete | EQP_PPCuttingComplete | EQP_PPCuttingComplete
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | PP裁切任务完成上报
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | CutedQty | int | 裁切后套数
+4.4 | MaterialLots | List< MaterialLots> | 物料详情
+4.5 | CarrierId | string | 载具编码
+MaterialLots | MaterialLots | MaterialLots | MaterialLots
+4.4.1 | MaterialLot | string | 物料批次
+4.4.2 | MaterialPartCode | string | 物料编码
+4.4.3 | ConsumeQty | int | 消耗数量(裁切了多少数量)
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 162]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_PPCuttingComplete
+{
+    "From": "EQP",
+    "Message": "EQP_PPCuttingComplete",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content":{
+        "EqpId": "EQ01",
+      "JobId": "Job1",
+      "CutedQty":3,
+      "CarrierId":"carr1",
+      "MaterialLots":[{
+            "MaterialLot":"ma1",
+            "MaterialPartCode":"macode1",
+               "ConsumeQty":3
+        },{
+            "MaterialLot":"ma2",
+            "MaterialPartCode":"macode2",
+            "ConsumeQty": 3	
+        }]
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+"Content": {},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-024 询问是否管控有效期
+[TABLE 164]
+需求说明 | 询问是否管控有效期 | 询问是否管控有效期 | 询问是否管控有效期
+使用场景 | 询问是否管控有效期 | 询问是否管控有效期 | 询问是否管控有效期
+接口名称 | EQP_PPValidityAsk | EQP_PPValidityAsk | EQP_PPValidityAsk
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 询问是否管控有效期
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | MaterialLot | string | 物料批次
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | Result | string | 回复结果（Y/N）
+[TABLE 166]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_PPValidityAsk
+{
+    "From": "EQP",
+    "Message": "EQP_PPValidityAsk ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content":{
+        "EqpId": "EQ01",
+        "MaterialLot":"ma1",
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+"Content": {
+" Result ": " Y"
+},
+    "RequestId": "20250107121135343"
+}
+EQP-EAP-025 压膜机扫描物料标签上报
+[TABLE 168]
+需求说明 | 设备扫码枪读取物料标签二维码信息，再根据EAP下发的干膜型号需上报EAP进行校验物料信息是否可用 | 设备扫码枪读取物料标签二维码信息，再根据EAP下发的干膜型号需上报EAP进行校验物料信息是否可用 | 设备扫码枪读取物料标签二维码信息，再根据EAP下发的干膜型号需上报EAP进行校验物料信息是否可用
+使用场景 | ※设备需要配备扫码枪
+1.EAP下发配方参数（干膜型号）给到压膜机设备
+2.人工使用扫码枪扫描物料标签
+3.设备通过此接口上报物料标签+干膜型号给到EAP校验是否可用
+4.若出现回复不可用，设备需要报警提示 | ※设备需要配备扫码枪
+1.EAP下发配方参数（干膜型号）给到压膜机设备
+2.人工使用扫码枪扫描物料标签
+3.设备通过此接口上报物料标签+干膜型号给到EAP校验是否可用
+4.若出现回复不可用，设备需要报警提示 | ※设备需要配备扫码枪
+1.EAP下发配方参数（干膜型号）给到压膜机设备
+2.人工使用扫码枪扫描物料标签
+3.设备通过此接口上报物料标签+干膜型号给到EAP校验是否可用
+4.若出现回复不可用，设备需要报警提示
+接口名称 | EQP_MaterialLableReport | EQP_MaterialLableReport | EQP_MaterialLableReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备扫码枪读取物料二维码信息上报到EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | QRCode | string | 扫码枪扫到
+->物料二维码（MaterialId）
+*读取失败固定为ERROR
+4.3 | DryFilm | string | 干膜型号
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | Result | bool | True：可用
+False：不可用
+[TABLE 171]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_MaterialLableReport
+{
+    "From": "EQP",
+    "Message": "EQP_MaterialLableReport",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "QRCode": "MaterialId001",
+"DryFilm": "DryFilm001"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+  "Code": "0000",
+  "Success": true,
+  "Msg": " ",
+  "DateTime": "2024/11/27 15:00:00",
+  "Content": {
+    "Result": true
+  },
+  "RequestId": "20250107121135343"
+}
+EQP-EAP-026 料号校验
+[TABLE 174]
+需求说明 | EAP上报PanelId、料号，MES回复Panel是否为该料号 | EAP上报PanelId、料号，MES回复Panel是否为该料号 | EAP上报PanelId、料号，MES回复Panel是否为该料号
+使用场景 | 热熔机、回流线读PanelId截取批号、若当前任务没有验证过此批号则发送请求确认此批号是否符合当前料号。 | 热熔机、回流线读PanelId截取批号、若当前任务没有验证过此批号则发送请求确认此批号是否符合当前料号。 | 热熔机、回流线读PanelId截取批号、若当前任务没有验证过此批号则发送请求确认此批号是否符合当前料号。
+接口名称 | EQP_ProductCheck | EQP_ProductCheck | EQP_ProductCheck
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | EAP上报PanelId、料号，MES回复Panel是否为该料号
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | ProductCode | string | 料号
+4.3 | JobId | string | 任务名称
+4.4 | PanelId | string | 产品序列码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | Result | bool | True：OK
+False：NG
+[TABLE 177]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_ProductCheck
+{
+    "From": "EQP",
+    "Message": "EQP_ProductCheck",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "ProductCode": "ProductCode1",
+        "JobId": "JobId1",
+        "PanelId":"JobId1001"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+  "Code": "0000",
+  "Success": true,
+  "Msg": " ",
+  "DateTime": "2024/11/27 15:00:00",
+  "Content": {
+    "Result": true
+  },
+  "RequestId": "20250107121135343"
+}
+EQP-EAP-027 设备人员登录验证
+[TABLE 179]
+需求说明 | 账号密码登录验证 | 账号密码登录验证 | 账号密码登录验证
+使用场景 | 员工登录二次验证 | 员工登录二次验证 | 员工登录二次验证
+接口名称 | EQP_SyncEQLoginOtherInfo | EQP_SyncEQLoginOtherInfo | EQP_SyncEQLoginOtherInfo
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 设备人员账号登录上报到EAP
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | UserName | string | 账号
+4.3 | Password | string | 密码
+返回值列 | 返回值列 | 返回值列 | 返回值列
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 验证成功为ture，失败则fales
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 181]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_SyncEQLoginOtherInfo
+{
+    "From": "EQP",
+    "Message": "EQP_SyncEQLoginOtherInfo",
+    "DateTime": "20241127150000",
+    "Content": {
+             "EqpId": "EQ01",
+" UserName ": "123",
+" Password ": "123"
+           
+    },
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-028 喷码单片上报
+[TABLE 183]
+需求说明 | 喷码AB面上报结果 | 喷码AB面上报结果 | 喷码AB面上报结果
+使用场景 | 字符喷印上报 | 字符喷印上报 | 字符喷印上报
+接口名称 | EQP_Reportcoding | EQP_Reportcoding | EQP_Reportcoding
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 喷码AB面上报结果
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | Lot | string | Lot号
+4.2 | Project | string | 当前生产型号
+4.3 | Panelcode | string | 当前生产的Panel码
+4.4 | Time | string | 打码时间，按Panel计
+4.5 | UserName | string | 工号姓名
+4.6 | EqpId | string | 设备编号
+4.7 | Event | string | 指示打码场景:“正常|补码”
+4.8 | PnlFace | string | 面次，0=A面，1=B面
+4.9 | Result | string | 打码整体结果:”Success | Fail“
+4.10 | Codes | List< Codes > | 参数内容
+Codes | Codes | Codes | Codes
+4.10.1 | code | string | SET码或PCS码内容
+4.10.2 | positionx | string | 码位于Panel的X坐标
+4.10.3 | positiony | string | 码位于Panel的Y坐标
+4.10.4 | type | string | 0=明码,1=二维码
+4.10.5 | codetype | string | 码分类，2=set码，3=PCS码，4=cupon码，5=其他
+返回值列 | 返回值列 | 返回值列 | 返回值列
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 验证成功为ture，失败则fales
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 185]
+ | 请求 | REST:POST http://IP:Port/api/ EQP_Reportcoding
+{
+    "From": "EQP",
+    "Message": "EQP_IcCodeReport",
+    "DateTime": "20241127150000",
+    "Content": {
+"Lot": "L0349224", 
+            "Project":"H02GM21AM1-00”//当前生产型号
+"Panelcode":"509422402"，//当前生产的Panel码
+"Time":"2023-01-01 12:43:44"，//打码时间，按Panel计
+"UserName":"2003323-张三"，//工号姓名
+"EqpId":"DRL002"，//打码设备编号，根据现场设置实际提供
+“Event":"正常”，//指示打码场景:“正常|补码”
+             "PnlFace": "0”，//面次，0=A面，1=B面
+            “Result”:”Success”,  //打码整体结果:”Success | Fail“
+"Codes": [
+                    "code":“000051"，//SET码或PCS码内容
+                    "positionx": 105.29449462890625， //码位于Panel的X坐标
+                    "positiony":78.559661865234375，//码位于Panel的Y坐标
+                    "type":0， //8=明码,1=二维码
+                    "codetype":3 //码分类，2=set码，3=PCS码，4=cupon码，5=其他
+                   ] 
+
+    },
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+ | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-029 包胶铝片绑定上报
+[TABLE 188]
+需求说明 | 包胶机铝片绑定信息上报 | 包胶机铝片绑定信息上报 | 包胶机铝片绑定信息上报
+使用场景 | 包胶机上报铝片与Panel的绑定关系 | 包胶机上报铝片与Panel的绑定关系 | 包胶机上报铝片与Panel的绑定关系
+接口名称 | EQP_AluminumBindingReport | EQP_AluminumBindingReport | EQP_AluminumBindingReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 包胶机上报铝片与Panel的绑定关系
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备编号
+4.2 | AluminiumId | string | 铝片码
+4.3 | PanelIds | List<string> | 绑定Pnl集合
+返回值列 | 返回值列 | 返回值列 | 返回值列
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功，其余为错误代号)
+2 | Success | bool | 验证成功为ture，失败则fales
+3 | Msg | string | 错误讯息
+4 | DateTime | string | 系统时间戳（秒）（yyyyMMddhhmmss）
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 190]
+ | 请求 | REST:POST http://IP:Port/api/ EQP_AluminumBindingReport
+{
+    "From": "EQP",
+    "Message": "EQP_AluminumBindingReport",
+    "DateTime": "20241127150000",
+    "Content": {
+"EqpId": "Eqp1", 
+            "AluminiumId":"H02GM21AM1-00”
+"PanelIds": ["panel001","panel002"],
+    },
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+ | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "20241127150000",
+    "RequestId": "3f1a9d4a-6d81-45b3-9ddd-a3b9b1f1c1d3"
+}
+EQP-EAP-030 缺陷数据上报
+[TABLE 193]
+需求说明 | 缺陷数据上报 | 缺陷数据上报 | 缺陷数据上报
+使用场景 | 当AOI、VRS等检查完Panel一面后上报缺陷数据； | 当AOI、VRS等检查完Panel一面后上报缺陷数据； | 当AOI、VRS等检查完Panel一面后上报缺陷数据；
+接口名称 | EQP_DefectDataReport | EQP_DefectDataReport | EQP_DefectDataReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 调用EAP接口，每次只上报Panel一面的缺陷数据（上传失败需要重试）
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | AOIName | string | AOI名称
+4.3 | Pn | string | 料号
+4.4 | Stage | string | 类别
+4.5 | LotId | string | 批次
+4.6 | Layer | string | 层别，GTL：顶层层别，GBL：底层层别，例如：GTL
+4.7 | Layers | string | 正反面的层别，GTL：顶层层别，GBL：底层层别，例如：/GTL/GBL/
+4.8 | MachineId | string | 复检机编号
+4.9 | OperatorId | string | 操作员编号
+4.10 | Barcode | string | 板二维码
+4.11 | BoardIdx | int | 板序号
+4.12 | StartTime | string | 开始检板时间，eg：2023-06-01 23:57:45
+4.13 | EndTime | string | 检板结束时间，eg：2023-06-01 23:57:49
+4.14 | IsLayerA | int | 是否A面     0：A面，1：B面
+4.15 | IsScrap | int | 是否报废板  0：非报废板，1：报废版
+4.16 | IsDual | int | 是否双面      0：单面，1：双面
+4.17 | DefectList | List<DefectDatas> | 设备缺陷内容清单列表
+DefectData | DefectData | DefectData | DefectData
+4.17.1 | ID | int | 缺陷序号
+4.17.2 | AOIDefectCode | int | AOI缺陷代码
+4.17.3 | UserConfirmCode | int | 操作员确认的缺陷代码
+4.17.4 | UserConfirmTxt | string | 操作员确认的缺陷名字
+4.17.5 | PieceIDTxtOfPanel | string | 缺陷所在的pcs处于Panel的第几个位置
+4.17.6 | ImgPath | string | 缺陷图片路径
+4.17.7 | DefectXCoordinate | string | 缺陷X坐标
+4.17.8 | DefectYCoordinate | string | 缺陷Y坐标
+4.17.9 | ConfirmTime | string | 缺陷确认时间
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 195]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_DefectDataReport
+{
+    "From": "EQP",
+    "Message": "EQP_DefectDataReport",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {
+        "EqpId": "SO-AOI-001-VRS02",
+        "AOIName": "YIMEIZHI二线",
+        "Pn": "07010P040367A4E",
+        "Stage": "",
+        "LotId": "25450354",
+        "Layer": "GTL",
+        "Layers": "/GTL/GBL/",
+        "MachineId": "SO-AOI-001-VRS02",
+        "OperatorId": "AA",
+        "Barcode": "7799",
+        "BoardIdx": "",
+        "StartTime": "2025-11-20 08:36:33.115",
+        "EndTime": "2025-11-20 08:36:33.115",
+        "IsLayerA": "1",
+        "IsScrap": "0",
+        "IsDual": "1",
+        "DefectList": [
+            {
+                "ID": "1",
+                "AOIDefectCode": "36",
+                "UserConfirmCode": "32",
+                "UserConfirmTxt": "缺口",
+                "PieceIDTxtOfPanel": "9",
+                "ImgPath": "",
+                "DefectXCoordinate": "",
+                "DefectYCoordinate": "",
+                "ConfirmTime": "2025-11-20 08:36:33.115"
+            }
+        ]
+    },
+    "RequestId": "20250107121135343"
+} | 
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+} | 
+EQP-EAP-031 子任务完成上报
+[TABLE 198]
+需求说明 | 包胶机子任务数量生产完成上报 | 包胶机子任务数量生产完成上报 | 包胶机子任务数量生产完成上报
+使用场景 | 包胶机子任务数量生产完成上报 | 包胶机子任务数量生产完成上报 | 包胶机子任务数量生产完成上报
+接口名称 | EQP_TaskCompleteReport | EQP_TaskCompleteReport | EQP_TaskCompleteReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 子任务完成上报
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | TaskId | string | 子任务名称
+4.3 | OkCount | int | 实际OK板数量
+ | PortId | string | 设备端口ID
+一般L：表示投板机Port信息，U：表示收板机Port信息
+L01：上料口#1（上料位#1）
+L02：上料口#2（上料位#2）
+L03：上料口#3（上料位#3）
+...
+U01：上料口#1（下料位#1）
+U02：上料口#2（下料位#2）
+U03：上料口#3（下料位#3）
+U04：上料口#4（下料位#4）
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 200]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_DefectDataReport
+{
+    "From": "EQP",
+    "Message": "EQP_DefectDataReport",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "TaskId": "T001",
+“OkCount”:
+    },
+    "RequestId": "20250107121135343"
+} | 
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+} | 
+EQP-EAP-032 涨缩分堆尾批下机
+[TABLE 203]
+需求说明 | 涨缩分堆尾批下机 | 涨缩分堆尾批下机 | 涨缩分堆尾批下机
+使用场景 | 裁磨线尾批生产完成时，收板机上报涨缩分堆信息请求下机 | 裁磨线尾批生产完成时，收板机上报涨缩分堆信息请求下机 | 裁磨线尾批生产完成时，收板机上报涨缩分堆信息请求下机
+接口名称 | EQP_StackingTailUnloadReport | EQP_StackingTailUnloadReport | EQP_StackingTailUnloadReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 涨缩分堆尾批下机
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | PnlQty | int | 产品数量
+4.4 | Stacking | List<StackingInfo> | 产品涨缩信息
+StackingInfo | StackingInfo | StackingInfo | StackingInfo
+4.4.1 | PortId | string | 设备端口ID（无Port则为空）
+U：表示收板机Port信息
+U01：上料口#1（下料位#1）
+U02：上料口#2（下料位#2）
+U03：上料口#3（下料位#3）
+U04：上料口#4（下料位#4）
+4.4.2 | OKCount | int | OK数量
+4.4.3 | PanelList | List<string> | PNL列表，例如：["Panel001","Panel002"]
+4.4.4 | Type | int | 0:正常区间；1：涨值区间；2：缩值区间
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 205]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_StackingTailUnloadReport
+{
+  "From": "EQP",
+  "Message": "EQP_StackingTailUnloadReport",
+  "DateTime": "2025/11/20 15:00:00",
+  "Content": {
+    "EqpId": "EQ1",
+    "JobId": "0612324355",
+    "PnlQty": 60,
+    "Stacking": [
+      {
+        "PortId": "U01",
+        "OKCount": 40,
+        "PanelList": ["Pnl1", "Pnl2", "Pnl3"],
+        "Type": 0
+      },
+      {
+        "PortId": "U02",
+        "OKCount": 15,
+        "PanelList": ["Pnl4", "Pnl5", "Pnl6"],
+        "Type": 1
+      },
+      {
+        "PortId": "U03",
+        "OKCount": 5,
+        "PanelList": ["Pnl7", "Pnl8", "Pnl9"],
+        "Type": 2
+      }
+    ]
+  },
+  "RequestId": "20250107121135343"
+} | 
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+} | 
+EQP-EAP-033 管位带/钻带资料请求
+[TABLE 208]
+需求说明 | 管位带/钻带资料请求 | 管位带/钻带资料请求 | 管位带/钻带资料请求
+使用场景 | 管位带/钻带资料请求 | 管位带/钻带资料请求 | 管位带/钻带资料请求
+接口名称 | EQP_DrillProgramPathRequest | EQP_DrillProgramPathRequest | EQP_DrillProgramPathRequest
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 背钻管位带资料请求
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | QRCode | string | 扫码枪扫到
+->Lot卡二维码（LotId）
+4.3 | Face | string | 面次:
+CS：正面
+SS：反面
+4.4 | AxisBindings | List<AxisBinding> | 轴号信息（仅背钻钻机需上报）
+4.5 | FileType | int | 资料类型
+1:背钻管位带资料
+2:背钻钻带资料
+3:CT钻带资料
+4.6 | PanelId | string | 产品序列码（CT检查机需上报）
+AxisBinding | AxisBinding | AxisBinding | AxisBinding
+4.4.1 | AxisCode | string | 轴号
+4.4.2 | PanelId | string | 产品序列码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | SlotProgramPath | string | 管位带资料路径
+5.2 | DrillPrograms | List<DrillProgram> | 钻带资料路径信息（背钻与CT）
+5.3 | DrlParam | string | 钻孔参数
+DrillProgram | DrillProgram | DrillProgram | DrillProgram
+5.2.1 | AxisCode | string | 轴号 (仅背钻钻机需要)
+5.2.2 | CSDrillProgramPath | string | CS面钻带路径
+5.2.3 | SSDrillProgramPath | string | SS面钻带路径
+[TABLE 210]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_DrillProgramPathRequest
+{
+  "From": "EQP",
+  "Message": "EQP_DrillProgramPathRequest",
+  "DateTime": "2026/04/17 15:10:30",
+  "RequestId": "20260417151030123",
+  "Content": {
+    "EqpId": "BDRILL01",
+    "QRCode": "LOT20260417001",
+    "Face": "CS",
+    "FileType": 2,
+    "PanelId": "PNL0001",
+    "AxisBindings": [
+      {
+        "AxisCode": "1",
+        "PanelId": "PNL0001"
+      },
+      {
+        "AxisCode": "2",
+        "PanelId": "PNL0002"
+      }
+    ]
+  }
+} | 
+日志范例 | 应答 | {
+  "Code": "0000",
+  "Success": true,
+  "Msg": "Success",
+  "DateTime": "2026/04/17 15:10:31",
+  "RequestId": "20260417151030123",
+  "Content": {
+"SlotProgramPath": "\\\\SERVER\\Program\\Slot\\slot01.dr",
+“DrlParam”:”\\\\SERVER\\Program\\Slot\\1.txt”,
+    "DrillPrograms": [
+      {
+        "AxisCode": "1",
+        "CSDrillProgramPath": "\\\\SERVER\\Program\\Drill\\A1\\CS\\drill_cs_01.dr",
+        "SSDrillProgramPath": "\\\\SERVER\\Program\\Drill\\A1\\SS\\drill_ss_01.dr"
+      },
+      {
+        "AxisCode": "2",
+        "CSDrillProgramPath": "\\\\SERVER\\Program\\Drill\\A2\\CS\\drill_cs_02.dr",
+        "SSDrillProgramPath": "\\\\SERVER\\Program\\Drill\\A2\\SS\\drill_ss_02.dr"
+      }
+    ]
+  }
+} | 
+EQP-EAP-034 By PNL上传钻带资料路径信息
+[TABLE 213]
+需求说明 | 每做完一片PNL上报生成的钻带资料路径 | 每做完一片PNL上报生成的钻带资料路径 | 每做完一片PNL上报生成的钻带资料路径
+使用场景 | 背钻测厚、背钻AOI、CT检查机 每做完一片PNL上报生成的钻带资料路径 | 背钻测厚、背钻AOI、CT检查机 每做完一片PNL上报生成的钻带资料路径 | 背钻测厚、背钻AOI、CT检查机 每做完一片PNL上报生成的钻带资料路径
+接口名称 | EQP_ReportedDrillProgramPath | EQP_ReportedDrillProgramPath | EQP_ReportedDrillProgramPath
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 每做完一片PNL上报生成的钻带资料路径
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | FileType | int | 资料类型
+1:背钻管位带资料
+2:背钻钻带资料（板厚测量、CT检查机上报）
+3:CT钻带资料（AOI上报）
+4.4 | DrillProgramInfos | List<DrillProgramInfo> | 钻带资料信息
+DrillProgramInfo | DrillProgramInfo | DrillProgramInfo | DrillProgramInfo
+4.2.1 | PanelId | string | 产品序列码
+4.4.2 | Face | string | 面次:
+CS：正面
+SS：反面
+4.4.3 | DrillProgramPath | string | 钻带路径
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 215]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_ReportedDrillProgramPath
+{
+  "From": "EQP",
+  "Message": "EQP_ReportedDrillProgramPath",
+  "DateTime": "2026/04/16 12:30:00",
+  "RequestId": "20260416123000123",
+  "Content": {
+"EqpId": "DRI80001",
+“JobId” : “Job1”,
+“FileType” : 1
+    "DrillProgramInfos": [
+      {
+        "PanelId": "PANEL00001",
+        "Face": "CS",
+        "DrillProgramPath": "\\EAP_SERVER\\DrillData\\PANEL00001\\CS\\DRILL_01.nc"
+      }
+    ]
+  }
+} | 
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+} | 
+EQP-EAP-035 背钻每趟做完后上报完工信息
+[TABLE 218]
+需求说明 | 背钻每趟加工完成后上报完工信息 | 背钻每趟加工完成后上报完工信息 | 背钻每趟加工完成后上报完工信息
+使用场景 | 背钻每趟加工完成后上报完工信息 | 背钻每趟加工完成后上报完工信息 | 背钻每趟加工完成后上报完工信息
+接口名称 | EQP_BackDrillCompletionReport | EQP_BackDrillCompletionReport | EQP_BackDrillCompletionReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 背钻每趟做完后上报完工信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | Face | string | 面次:
+CS：正面
+SS：反面
+4.3 | AxisBindings | List<AxisBinding> | 轴号信息
+4.4 | CompletionStatus | string | 完工状态（Finished：完成：Unfinished：未完成）
+4,5 | JobId | string | 任务名称
+AxisBinding | AxisBinding | AxisBinding | AxisBinding
+4.4.1 | AxisCode | string | 轴号
+4.4.2 | PanelId | string | 产品序列码
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 220]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_BackDrillCompletionReport
+{
+  "From": "EQP",
+  "Message": "EQP_BackDrillCompletionReport",
+  "DateTime": "2026/04/16 13:00:00",
+  "RequestId": "20260416130000123",
+  "Content": {
+    "EqpId": "DRI80001",
+"Face": "CS",
+“JobId” : ”Job1”
+    "AxisBindings": [
+      {
+        "AxisCode": "1",
+        "PanelId": "PNL000001"
+      },
+      {
+        "AxisCode": "2",
+        "PanelId": "PNL000002"
+      }
+},"CompletionStatus": "Success"
+} | 
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+} | 
+EQP-EAP-036 CT检查机制程数据报告
+[TABLE 223]
+需求说明 | CT检查机制程数据报告 | CT检查机制程数据报告 | CT检查机制程数据报告
+使用场景 | CT检查机制程数据报告 | CT检查机制程数据报告 | CT检查机制程数据报告
+接口名称 | EQP_CTProcessDataReport | EQP_CTProcessDataReport | EQP_CTProcessDataReport
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EQP | EAP | 背钻每趟做完后上报完工信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备ID
+4.2 | ComponentCount | int | 元件数
+4.3 | JobId | string | 任务名称
+4.4 | PanelId | string | 产品序列码
+4.5 | Pn | string | 产品料号
+4.6 | LineName | string | 产线
+4.7 | PadCount | int | 焊盘数
+4.8 | NgComponentCount | int | 不合格元件数
+4.9 | NgPadCount | int | 不合格焊盘数
+4.10 | TestTime | DateTime | 测试时间
+4.11 | Tester | string | 测试人员
+4.12 | TestDuration | string | 检测时长（可为null）
+4.13 | BoardBarcode | string | 电路板条码
+4.14 | SubBoardBarcode | string | 子板条码
+4.15 | Components | List<Component> | 元件信息列表
+Component | Component | Component | Component
+4.15.1 | ComponentPn | string | 元件料号（可为null）
+4.15.2 | Name | string | 名称
+4.15.3 | Side | string | 板面（T：上面/B：下面）
+4.15.4 | ComponentType | string | 元件类型（BGA/QFN/QFP等）
+4.15.5 | Result | string | 结果（OK/NG）
+4.15.6 | NgName | string | 不良名称
+4.15.7 | ReviewResult | string | 复判结果（OK/NG）
+4.15.8 | ReviewName | string | 复判名称（可为null）
+4.15.9 | ImagePath | string | 图片路径
+4.15.10 | Pads | List<Pad> | 焊盘信息列表
+Pad |  |  | 
+4.15.10.1 | PadName | string | 焊盘名
+4.15.10.2 | MachineResult | string | 机台结果（OK/NG）
+4.15.10.3 | NgName | string | 不良名称
+4.15.10.4 | ReviewResult | string | 复判结果
+4.15.10.5 | ReviewName | string | 复判名称（可为null）
+4.15.10.6 | ReviewTime | DateTime | 复判时间（可为null）
+4.15.10.7 | Reviewer | string | 复判人员（可为null）
+4.15.10.8 | JudgmentConditions | List<JudgmentCondition> | 判定条件列表
+JudgmentCondition |  |  | 
+4.15.10.8.1 | ConditionName | string | 判别名
+4.15.10.8.2 | ConditionItem | string | 判别项
+4.15.10.8.3 | SetValue | string | 设定值
+4.15.10.8.4 | Unit | string | 单位
+4.15.10.8.5 | Operator | string | 判定条件（≥/≤/=等）
+4.15.10.8.6 | TestValue | string | 测试值
+4.15.10.8.7 | TestUnit | string | 测试单位
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 225]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EQP_BackDrillCompletionReport
+{
+    "From": "EQP",
+    "Message": "EQP_CTProcessDataReport",
+    "DateTime": "2025/12/22 14:02:50",
+    "Content": {
+        "EqpId": "CT-001",
+        "ComponentCount": 3,
+        "JobId": "CT_TEST_JOB",
+        "PanelId": "CT_PANEL_20251222",
+        "Pn": "CT_PRODUCT_001",
+        "LineName": "xxxx",
+        "PadCount": 826,
+        "NgComponentCount": 3,
+        "NgPadCount": 198,
+        "TestTime": "2025/12/22 14:02:19",
+        "Tester": "sanying",
+        "TestDuration": null,
+        "BoardBarcode": "140219",
+        "SubBoardBarcode": "241F15CF0986",
+        "Components": [
+            {
+                "ComponentPn": null,
+                "Name": "元件1_ROI 1_0",
+                "Side": "T",
+                "ComponentType": "BGA",
+                "Result": "NG",
+                "NgName": "少锡,圆度;圆度;少锡",
+                "ReviewResult": "OK",
+                "ReviewName": null,
+                "ImagePath": "/",
+                "Pads": [
+                    {
+                        "PadName": "焊盘 ROI 11",
+                        "MachineResult": "NG",
+                        "NgName": "少锡,圆度",
+                        "ReviewResult": null,
+                        "ReviewName": null,
+                        "ReviewTime": "2025/12/22 14:02:42",
+                        "Reviewer": null,
+                        "JudgmentConditions": [
+                            {
+                                "ConditionName": "填锡率上限",
+                                "ConditionItem": "焊锡/气孔",
+                                "SetValue": "125",
+                                "Unit": "%",
+                                "Operator": "≥",
+                                "TestValue": "67.41",
+                                "TestUnit": "%"
+                            },
+                            {
+                                "ConditionName": "填锡率下限",
+                                "ConditionItem": "焊锡/气孔",
+                                "SetValue": "75",
+                                "Unit": "%",
+                                "Operator": "≤",
+                                "TestValue": "67.41",
+                                "TestUnit": "%"
+                            }
+                        ]
+                    },
+                    {
+                        "PadName": "焊盘 ROI 12",
+                        "MachineResult": "NG",
+                        "NgName": "少锡,圆度",
+                        "ReviewResult": null,
+                        "ReviewName": null,
+                        "ReviewTime": "2025/12/22 14:02:42",
+                        "Reviewer": null,
+                        "JudgmentConditions": []
+                    }
+                ]
+            },
+            {
+                "ComponentPn": null,
+                "Name": "元件2_ROI 1_0",
+                "Side": "T",
+                "ComponentType": "BGA",
+                "Result": "NG",
+                "NgName": "少锡",
+                "ReviewResult": "OK",
+                "ReviewName": null,
+                "ImagePath": "/",
+                "Pads": [
+                    {
+                        "PadName": "焊盘 ROI 11",
+                        "MachineResult": "NG",
+                        "NgName": "少锡",
+                        "ReviewResult": null,
+                        "ReviewName": null,
+                        "ReviewTime": "2025/12/22 14:02:44",
+                        "Reviewer": null,
+                        "JudgmentConditions": []
+                    },
+                    {
+                        "PadName": "焊盘 ROI 12",
+                        "MachineResult": "NG",
+                        "NgName": "少锡",
+                        "ReviewResult": null,
+                        "ReviewName": null,
+                        "ReviewTime": "2025/12/22 14:02:44",
+                        "Reviewer": null,
+                        "JudgmentConditions": []
+                    }
+                ]
+            },
+            {
+                "ComponentPn": null,
+                "Name": "元件3_ROI 1_0",
+                "Side": "T",
+                "ComponentType": "QFN/QFP",
+                "Result": "NG",
+                "NgName": "空穴",
+                "ReviewResult": "OK",
+                "ReviewName": null,
+                "ImagePath": "/",
+                "Pads": [
+                    {
+                        "PadName": "接地 1",
+                        "MachineResult": "NG",
+                        "NgName": "空穴",
+                        "ReviewResult": null,
+                        "ReviewName": null,
+                        "ReviewTime": "2025/12/22 14:02:50",
+                        "Reviewer": null,
+                        "JudgmentConditions": []
+                    }
+                ]
+            }
+        ]
+    },
+    "RequestId": "20251222140250000"
+} | 
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2025/11/20 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+} | 
+EAP -> EQP 接口
+EAP-EQP-001 初始化状态请求
+[TABLE 230]
+需求说明 | EAP向设备请求目前的基本状态 | EAP向设备请求目前的基本状态 | EAP向设备请求目前的基本状态 | EAP向设备请求目前的基本状态
+使用场景 | EAP与设备初始化连接时，需要获得设备当前运行状况，例如：设备控制模式、设备生产模式、设备状态、设备当前配方、设备当前任务名称、当前任务总数量、当前完工数量； | EAP与设备初始化连接时，需要获得设备当前运行状况，例如：设备控制模式、设备生产模式、设备状态、设备当前配方、设备当前任务名称、当前任务总数量、当前完工数量； | EAP与设备初始化连接时，需要获得设备当前运行状况，例如：设备控制模式、设备生产模式、设备状态、设备当前配方、设备当前任务名称、当前任务总数量、当前完工数量； | EAP与设备初始化连接时，需要获得设备当前运行状况，例如：设备控制模式、设备生产模式、设备状态、设备当前配方、设备当前任务名称、当前任务总数量、当前完工数量；
+接口名称 | EAP_InitialDataRequest | EAP_InitialDataRequest | EAP_InitialDataRequest | EAP_InitialDataRequest
+接口方式 | 接口调用方 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EAP | EQP | EAP向设备请求目前的基本状态
+请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表 | 请求参数列表
+序号 | 字段 | 字段 | 类型 | 描述
+1 | From | From | string | 调用接口来源（EAP）
+2 | Message | Message | string | 消息（接口名）
+3 | DateTime | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | Content | object | 参数内容
+5 | RequestId | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content | Content
+4.1 | EqpId | EqpId | string | 设备 ID
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 字段 | 类型 | 描述
+1 | Code | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | Success | bool | 执行成功与否
+3 | Msg | Msg | string | 提示讯息
+4 | DateTime | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | Content | object | 参数内容
+6 | RequestId | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content | Content
+5.1 | EqpId | EqpId | string | 设备ID
+5.2 | ControlMode | ControlMode | string | 控制模式：
+Local ：离线本地模式；
+Remote： 在线远程模式
+5.3 | EqpStatus | EqpStatus | string | 设备状态：
+Run 运行
+Pause 暂停
+Idle 待机
+Down 故障
+PM 保养
+Ready 准备
+5.4 | JobId | JobId | string | 当前任务名称；如果没有，默认为空值
+日志范例 | 日志范例 | 日志范例 | 请求 | 请求 | REST:POST http://IP:Port/api/EAP_InitialDataRequest
+{
+    "From": "EAP",
+    "Message": "EAP_InitialDataRequest",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01"
+    },
+    "RequestId": "20250107121135343"
+} | REST:POST http://IP:Port/api/EAP_InitialDataRequest
+{
+    "From": "EAP",
+    "Message": "EAP_InitialDataRequest",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 日志范例 | 日志范例 | 应答 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "ControlMode": "Remote",
+        "EQPStatus": "Run ",
+        "JobId": "string"
+    },
+    "RequestId": "20250107121135343"
+} | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "ControlMode": "Remote",
+        "EQPStatus": "Run ",
+        "JobId": "string"
+    },
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-002 时间同步
+[TABLE 233]
+需求说明 | EAP时间下发 | EAP时间下发 | EAP时间下发
+使用场景 | EAP下发时间， 设备同步 EAP时间 | EAP下发时间， 设备同步 EAP时间 | EAP下发时间， 设备同步 EAP时间
+接口名称 | EAP_ DateTimeSyncCommand | EAP_ DateTimeSyncCommand | EAP_ DateTimeSyncCommand
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP 时间下发
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | DateTime | DateTime | 时间（格式：yyyy/MM/dd HH:mm:ss）
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 235]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_DateTimeSyncCommand
+{
+    "From": "EAP",
+    "Message": "EAP_DateTimeSyncCommand",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "DateTime": "2024/11/27 15:00:00"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-003 远程控制模式下发
+[TABLE 237]
+需求说明 | EAP下发远程控制模式 | EAP下发远程控制模式 | EAP下发远程控制模式
+使用场景 | EAP下发远程控制模式，设备在线远程模式下，可接收EAP下发的远程指令（此命令除外）以及参数上报；在离线本地模式下，只进行数据采集； | EAP下发远程控制模式，设备在线远程模式下，可接收EAP下发的远程指令（此命令除外）以及参数上报；在离线本地模式下，只进行数据采集； | EAP下发远程控制模式，设备在线远程模式下，可接收EAP下发的远程指令（此命令除外）以及参数上报；在离线本地模式下，只进行数据采集；
+接口名称 | EAP_ControlModeCommand | EAP_ControlModeCommand | EAP_ControlModeCommand
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP下发远程控制模式
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备  ID
+4.2 | ControlMode | string | Local： 离线本地模式 
+Remote： 在线远程模式
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 240]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_ControlModeCommand
+{
+    "From": "EAP",
+    "Message": "EAP_ControlModeCommand",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "ControlMode": "Remote"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-004 远程信息下发
+[TABLE 242]
+需求说明 | EAP 下发远程信息 | EAP 下发远程信息 | EAP 下发远程信息
+使用场景 | 当上位系统(MES/EAP)有异常发生时，EAP通知设备在人机界面上显示提示信息并触发蜂鸣器 | 当上位系统(MES/EAP)有异常发生时，EAP通知设备在人机界面上显示提示信息并触发蜂鸣器 | 当上位系统(MES/EAP)有异常发生时，EAP通知设备在人机界面上显示提示信息并触发蜂鸣器
+接口名称 | EAP_CIMMessageCommand | EAP_CIMMessageCommand | EAP_CIMMessageCommand
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP 下发远程信息
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备ID
+4.2 | IntervalSecondTime | string | 显示间隔时间
+0:需要确认后关闭(默认)；
+>0:到达显示时间，自动关闭；
+4.3 | CimMessage | string | 信息内容
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 244]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_CIMMessageCommand
+{
+    "From": "EAP",
+    "Message": "EAP_CIMMessageCommand",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "IntervalSecondTime": "0",
+        "CimMessage": "Message string"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-005 远程控制指令下发
+[TABLE 247]
+需求说明 | EAP下发远程控制指令 | EAP下发远程控制指令 | EAP下发远程控制指令
+使用场景 | 此功能应用于多个场景，EAP控制设备动作，例如：将NG板放入NG工位、通知投板机开始作业、通知首件OK等常规远程指令 | 此功能应用于多个场景，EAP控制设备动作，例如：将NG板放入NG工位、通知投板机开始作业、通知首件OK等常规远程指令 | 此功能应用于多个场景，EAP控制设备动作，例如：将NG板放入NG工位、通知投板机开始作业、通知首件OK等常规远程指令
+接口名称 | EAP_RemoteControlCommand | EAP_RemoteControlCommand | EAP_RemoteControlCommand
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP下发远程控制命令
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EQP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备ID
+4.2 | PortId | string | 设备端口ID，如果没端口，此栏位为空
+一般L：表示投板机Port信息，U：表示收板机Port信息，PP：表示PP上料位
+L01：上料口#1（上料位#1）
+L02：上料口#2（上料位#2）
+L03：上料口#3（上料位#3）
+...
+U01：上料口#1（下料位#1）
+U02：上料口#2（下料位#2）
+U03：上料口#3（下料位#3）
+U04：上料口#4（下料位#4）
+4.3 | RemoteCommand | string | Start：通知机台开始投板
+Stop：通知机台停止板
+OpenBuffer：通知机台启动暂存
+CloseBuffer：通知机台关闭暂存
+UnloadCarrier：通知机台下料
+AGVTransferComplete： AGV派送完成
+ReadyStart通知准备开始投板
+Complete：通知上游设备完工
+4.4 | JobId | string | 任务名称
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 249]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_RemoteControlCommand
+{
+    "From": "EAP",
+    "Message": "EAP_RemoteControlCommand",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "PortId": "L01",
+        "RemoteCommand": "Complete"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-006 询问设备关键参数
+[TABLE 251]
+需求说明 | EAP 询问关键参数 | EAP 询问关键参数 | EAP 询问关键参数
+使用场景 | EAP 定时询问设备的关键参数（频率 60 秒/次） | EAP 定时询问设备的关键参数（频率 60 秒/次） | EAP 定时询问设备的关键参数（频率 60 秒/次）
+接口名称 | EAP_TraceDataRequest | EAP_TraceDataRequest | EAP_TraceDataRequest
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP 询问关键参数
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EAP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | TraceDataList | List<string> | 关键参数列表（EAP询问哪些参数项，设备回复哪些参数）
+例如：[“T0001”,”T0002”,”T0003”]
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | EqpId | string | 设备ID
+5.2 | JobId | string | 任务名称
+若无任务信息，则此项为空
+5.3 | PanelId | string | 产品序列码
+*若无Panel信息，则此项为空
+5.4 | TraceDataList | List<DataItem> | 数据采集列表（EAP询问哪些参数项，设备回复哪些参数）
+DataItem | DataItem | DataItem | DataItem
+5.4.1 | ItemName | string | 制程参数名称
+5.4.2 | ItemValue | string | 数据值
+[TABLE 253]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_TraceDataRequest
+{
+    "From": "EAP",
+    "Message": "EAP_TraceDataRequest",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "TraceDataList":["T0001", "T0002","T0003"]
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "JobId": "Lot01",
+        "PanelId": "panel001",
+        "TraceDataList": [
+            {
+                "ItemName": "T0001",
+                "ItemValue": "1"
+            },
+            {
+                "ItemName": "T0002",
+                "ItemValue": "2"
+            },
+            {
+                "ItemName": "T0003",
+                "ItemValue": "3"
+            }
+        ]
+    },
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-007 任务信息下发
+[TABLE 256]
+需求说明 | EAP 任务信息下发 | EAP 任务信息下发 | EAP 任务信息下发 | EAP 任务信息下发
+使用场景 | EAP下发生产任务信息给到设备，设备收到生产任务信息进行切换任务生产，设备需要提供生产任务队列功能（至少可以存储5个生产队列） | EAP下发生产任务信息给到设备，设备收到生产任务信息进行切换任务生产，设备需要提供生产任务队列功能（至少可以存储5个生产队列） | EAP下发生产任务信息给到设备，设备收到生产任务信息进行切换任务生产，设备需要提供生产任务队列功能（至少可以存储5个生产队列） | EAP下发生产任务信息给到设备，设备收到生产任务信息进行切换任务生产，设备需要提供生产任务队列功能（至少可以存储5个生产队列）
+接口名称 | EAP_JobDataDownload | EAP_JobDataDownload | EAP_JobDataDownload | EAP_JobDataDownload
+接口方式 | 接口调用方 | 接口提供方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EQP | EAP 任务信息下载
+参数列表 | 参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 类型 | 描述
+1 | From | string | string | 调用接口来源（EAP）
+2 | Message | string | string | 消息（接口名）
+3 | DateTime | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | object | 参数内容
+5 | RequestId | string | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content | Content
+4.1 | EqpId | string | string | 设备 ID
+4.2 | JobId | string | string | 任务名称
+4.3 | Pn | String | String | 产品料号
+4.4 | PortId | string | string | 设备端口ID，如果没端口，此栏位为空
+一般L：表示投板机Port信息，U：表示收板机Port信息，PP：表示PP上料位
+L01：上料口#1（上料位#1）
+L02：上料口#2（上料位#2）
+L03：上料口#3（上料位#3）
+...
+U01：上料口#1（下料位#1）
+U02：上料口#2（下料位#2）
+U03：上料口#3（下料位#3）
+U04：上料口#4（下料位#4）
+4.5 | TotalPanelCount | int | int | 任务数量
+4.6 | CarrierType | String | String | 载具类型
+4.7 | PanelList | List<string> | List<string> | 产品序列码，例如：["Panel001","Panel002"],
+4.8 | RecipeParameterList | List<RecipeParameter> | List<RecipeParameter> | 产品配方列表
+4.10 | StackingInfo | List<Stacking> | List<Stacking> | 叠构信息（仅叠构/压合设备使用，其它设备忽略）
+RecipeParameter | RecipeParameter | RecipeParameter | RecipeParameter | RecipeParameter
+4.8.1 | ItemName | string | string | 配方参数名称
+4.8.2 | ItemValue | string | string | 配方参数值
+Stacking | Stacking | Stacking | Stacking | Stacking
+4.10.1 | SequenceNo | SequenceNo | string | 顺序号
+4.10.2 | PpOrder | PpOrder | string | PP顺序
+4.10.3 | PpLayerCode | PpLayerCode | string | PP层码
+4.10.4 | Layer | Layer | string | 层别
+4.10.5 | MaterialCode | MaterialCode | string | 物料编码
+4.10.6 | MaterialName | MaterialName | string | 物料名称
+4.10.7 | RcRequirement | RcRequirement | string | RC要求
+4.10.8 | CopperFoilType | CopperFoilType | string | 铜箔类型
+4.10.9 | MaterialThickness | MaterialThickness | string | 材料厚度
+4.10.10 | DielectricThickness | DielectricThickness | string | 介质厚度
+4.10.11 | BaseCopper | BaseCopper | string | 基铜
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 类型 | 描述
+1 | Code | string | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | bool | 执行成功与否
+3 | Msg | string | string | 提示讯息
+4 | DateTime | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | object | 空
+6 | RequestId | string | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 258]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_JobDataDownload
+{
+  "From": "EAP",
+  "Message": "EAP_JobDataDownload",
+  "DateTime": "2024/11/27 15:00:00",
+  "Content": {
+    "EqpId": "EQ01",
+    "PortId": "L01",
+    "JobId": "Lot01",
+    "Pn": "Pn001",
+    "TotalPanelCount": 2,
+    "CarrierType": "Type1",
+    "PanelList": [
+      "Panel001",
+      "Panel002"
+    ],
+    "RecipeParameterList": [
+      {
+        "ItemName": "R0001",
+        "ItemValue": "1"
+      },
+      {
+        "ItemName": "R0002",
+        "ItemValue": "2"
+      }
+    ],
+    "StackingInfo": [
+      {
+        "SequenceNo": "1",
+        "PpOrder": "1",
+        "PpLayerCode": "PP01",
+        "Layer": "L1",
+        "MaterialCode": "MAT001",
+        "MaterialName": "PP Material",
+        "RcRequirement": "RC50",
+        "CopperFoilType": "TypeA",
+        "MaterialThickness": "0.2",
+        "DielectricThickness": "0.1",
+“BaseCopper”:””
+      }
+    ]
+  },
+  "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-008 通知设备任务更改
+[TABLE 260]
+需求说明 | EAP 通知设备任务更新或删除任务 | EAP 通知设备任务更新或删除任务 | EAP 通知设备任务更新或删除任务
+使用场景 | 当已下发生产任务需要更新或删除时，EAP通知设备进行变更； | 当已下发生产任务需要更新或删除时，EAP通知设备进行变更； | 当已下发生产任务需要更新或删除时，EAP通知设备进行变更；
+接口名称 | EAP_JobDataModifyCommand | EAP_JobDataModifyCommand | EAP_JobDataModifyCommand
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP 通知设备任务更改
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EAP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | ModifyType | string | Updata：更新任务
+Delete：删除任务（如下发删除不存在的任务时，设备默认回复成功）
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 262]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_JobDataModifyCommand
+{
+    "From": "EAP",
+    "Message": "EAP_JobDataModifyCommand",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01",
+        "JobId": "Lot01",
+        "ModifyType": "Updata"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-009 询问NG工位是否有板
+[TABLE 264]
+需求说明 | EAP 询问设备NG工位是否有板 | EAP 询问设备NG工位是否有板 | EAP 询问设备NG工位是否有板
+使用场景 | EAP 询问设备NG工位是否有板； | EAP 询问设备NG工位是否有板； | EAP 询问设备NG工位是否有板；
+接口名称 | EAP_NgPortHasPanelRequest | EAP_NgPortHasPanelRequest | EAP_NgPortHasPanelRequest
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP 询问设备NG工位是否有板
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EAP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+Content | Content | Content | Content
+5.1 | Result | string | Have：有板 ；Null：无板
+[TABLE 266]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_NgPortHasPanelRequest
+{
+    "From": "EAP",
+    "Message": "EAP_NgPortHasPanelRequest",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {
+        "EqpId": "EQ01"
+    },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+"Content": {
+“Result”:”Have”
+},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-010 裁切任务下发
+[TABLE 268]
+需求说明 | 裁切任务下发 | 裁切任务下发 | 裁切任务下发
+使用场景 | 裁切任务下发 | 裁切任务下发 | 裁切任务下发
+接口名称 | EAP_PPCuttingInfoSend | EAP_PPCuttingInfoSend | EAP_PPCuttingInfoSend
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | 裁切任务下发
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EAP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | PNLLength | float | PNL长
+4.4 | PNLWidth | float | PNL宽
+4.5 | StackUpDetail | List<StackUp> | 叠构
+4.6 | TaskQty | int | 任务数(裁多少套)，可设备端修改数量
+4.7 | IsControlExpiration | int | 是否管控有效期：1:管控，0:不管控
+StackUp | StackUp | StackUp | StackUp
+4.5.1 | PPSequence | int | 顺序号
+4.5.2 | MaterialPartCode | string | 物料编码
+4.5.3 | QTY | int | 任务数(裁多少套)，
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表 |  | float | 任务数(裁多少套)，可设备端修改数量
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 270]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_PPCuttingInfoSend
+{
+    "From": "EAP",
+    "Message": "EAP_PPCuttingInfoSend",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content":{
+              "EqpId": "EQ01",
+            "JobId":"Job1",
+            "PNLLength":50.1,
+            "PNLWidth":20.2,
+            "TaskQty":3,
+"IsControlExpiration":1,
+            "StackUpDetail":[{
+                  "PPSequence":1,
+                  "MaterialPartCode":"m1",
+"QTY":1
+              },{
+                  "PPSequence":2,
+                  "MaterialPartCode":"m2",
+                  "QTY":2
+              }]
+          },
+    "RequestId": "20250107121135343"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+"Content": {},
+    "RequestId": "20250107121135343"
+}
+EAP-EQP-011 子任务信息下发
+[TABLE 274]
+需求说明 | EAP 子任务信息下发 | EAP 子任务信息下发 | EAP 子任务信息下发
+使用场景 | EAP下发生产任务信息给到设备 | EAP下发生产任务信息给到设备 | EAP下发生产任务信息给到设备
+接口名称 | EAP_TaskDownload | EAP_TaskDownload | EAP_TaskDownload
+接口方式 | 接口调用方 | 接口提供方 | 接口服务描述
+Web API | EAP | EQP | EAP 任务信息下载
+参数列表 | 参数列表 | 参数列表 | 参数列表
+序号 | 字段 | 类型 | 描述
+1 | From | string | 调用接口来源（EAP）
+2 | Message | string | 消息（接口名）
+3 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+4 | Content | object | 参数内容
+5 | RequestId | string | 请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）
+Content | Content | Content | Content
+4.1 | EqpId | string | 设备 ID
+4.2 | JobId | string | 任务名称
+4.3 | TaskInfo | List<TaskInfo> | 子任务信息（仅包胶机设备使用，其它设备忽略）
+TaskInfo | TaskInfo | TaskInfo | TaskInfo
+4.3.1 | TaskId | string | 子任务名称
+4.3.2 | TaskQty | Int | 子任务数量（按照子任务数量下机）
+返回值列表 | 返回值列表 | 返回值列表 | 返回值列表
+序号 | 字段 | 类型 | 描述
+1 | Code | string | 结果代码(0000=成功， 其余为错误代号)
+2 | Success | bool | 执行成功与否
+3 | Msg | string | 提示讯息
+4 | DateTime | DateTime | 系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）
+5 | Content | object | 空
+6 | RequestId | string | 回复请求 ID（EQP返回的17位的唯一标识，与请求的RequestID一致）
+[TABLE 276]
+日志范例 | 请求 | REST:POST http://IP:Port/api/EAP_JobDataDownload
+{
+    "From": "EAP",
+    "Message": "EAP_TaskDownload",
+    "DateTime": "2025/12/29 10:30:45",
+    "Content": {
+        "EqpId": "CT-001",
+        "JobId": "jobid1",
+        "TaskInfo": [
+            {
+                "TaskId": "SUB_TASK_01",
+                "TaskQty": 50
+            },
+            {
+                "TaskId": "SUB_TASK_02",
+                "TaskQty": 30
+            }
+        ]
+    },
+    "RequestId": "20251229103045000"
+}
+日志范例 | 应答 | {
+    "Code": "0000",
+    "Success": true,
+    "Msg": " ",
+    "DateTime": "2024/11/27 15:00:00",
+    "Content": {},
+    "RequestId": "20250107121135343"
+}
