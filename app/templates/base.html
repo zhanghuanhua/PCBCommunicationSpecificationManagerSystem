@@ -19,7 +19,9 @@
   </header>
   <main class="page">
     <h1>{{ title }}</h1>
+    {% block content %}
     <p class="muted">第一版本地工具，用于结构化维护接口并生成规格书。</p>
+    {% endblock %}
   </main>
 </body>
 </html>

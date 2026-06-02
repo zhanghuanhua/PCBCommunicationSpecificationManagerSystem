@@ -48,3 +48,87 @@ body {
 .muted {
   color: var(--muted);
 }
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.button,
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: #fff;
+  color: var(--accent);
+}
+
+.table-wrap,
+.form-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+th {
+  background: #f3f4f6;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+}
+
+.form-panel {
+  display: grid;
+  gap: 14px;
+  max-width: 780px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  min-height: 36px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  font: inherit;
+}
+
+textarea {
+  min-height: 84px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}

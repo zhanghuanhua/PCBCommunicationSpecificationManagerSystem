@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form class="form-panel" method="post" action="/interfaces">
+  <label>
+    接口方向
+    <select name="direction">
+      <option value="EQP_TO_EAP">EQP -> EAP</option>
+      <option value="EAP_TO_EQP">EAP -> EQP</option>
+    </select>
+  </label>
+  <label>
+    接口编号
+    <input name="code" placeholder="例如 EQP-EAP-037" required>
+  </label>
+  <label>
+    接口名称
+    <input name="name" placeholder="例如 设备状态上报" required>
+  </label>
+  <label>
+    API 名称
+    <input name="api_name" placeholder="例如 EQP_EquipmentCurrentStatus" required>
+  </label>
+  <label>
+    需求说明
+    <textarea name="requirement"></textarea>
+  </label>
+  <label>
+    使用场景
+    <textarea name="scenario"></textarea>
+  </label>
+  <label>
+    服务描述
+    <textarea name="service_description"></textarea>
+  </label>
+  <label>
+    版本
+    <input name="version" value="4.0">
+  </label>
+  <label>
+    业务模块
+    <input name="module">
+  </label>
+  <div class="actions">
+    <button type="submit">保存接口</button>
+    <a href="/">取消</a>
+  </div>
+</form>
+{% endblock %}

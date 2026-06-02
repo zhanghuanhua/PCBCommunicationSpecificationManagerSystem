@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="toolbar">
+  <a class="button" href="/interfaces/new">新增接口</a>
+  <a class="button secondary" href="/exports">导出中心</a>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>接口编号</th>
+        <th>接口名称</th>
+        <th>方向</th>
+        <th>API 名称</th>
+        <th>调用方</th>
+        <th>提供方</th>
+        <th>版本</th>
+        <th>状态</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in interfaces %}
+      <tr>
+        <td>{{ item.code }}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ "EQP -> EAP" if item.direction == "EQP_TO_EAP" else "EAP -> EQP" }}</td>
+        <td>{{ item.api_name }}</td>
+        <td>{{ item.caller }}</td>
+        <td>{{ item.provider }}</td>
+        <td>{{ item.version }}</td>
+        <td>{{ item.status }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="empty">暂无接口，请先新增接口。</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
