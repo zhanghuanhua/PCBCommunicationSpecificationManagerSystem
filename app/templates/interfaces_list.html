@@ -1,43 +1,137 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="toolbar">
-  <a class="button" href="/interfaces/new">新增接口</a>
-  <a class="button secondary" href="/exports">导出中心</a>
+<section class="hero-panel">
+  <div>
+    <p class="eyebrow">EAP-EQP API Specification</p>
+    <h2>接口管理工作台</h2>
+    <p>结构化维护 EAP-EQP 接口，基于原规格书生成 Word/PDF，减少人工编辑错误。</p>
+  </div>
+  <div class="hero-actions">
+    <a class="button" href="/interfaces/new">新增接口</a>
+    <a class="button secondary" href="/imports/spec">导入原规格书</a>
+    <a class="button secondary" href="/exports">导出 Word/PDF</a>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>接口总数</span>
+    <strong>{{ stats.total }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>EQP -> EAP</span>
+    <strong>{{ stats.eqp_to_eap }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>EAP -> EQP</span>
+    <strong>{{ stats.eap_to_eqp }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>草稿接口</span>
+    <strong>{{ stats.draft }}</strong>
+  </div>
+</section>
+
+<div class="workspace-grid">
+  <aside class="side-panel">
+    <h2>快捷操作</h2>
+    <a class="action-row" href="/interfaces/new">
+      <strong>新增接口</strong>
+      <span>创建 EQP 上报或 EAP 下发接口</span>
+    </a>
+    <a class="action-row" href="/imports/spec">
+      <strong>导入原规格书</strong>
+      <span>上传现有 Word，作为后续导出模板</span>
+    </a>
+    <a class="action-row" href="/exports">
+      <strong>导出规格书</strong>
+      <span>选择 Word、PDF、Markdown 和水印</span>
+    </a>
+    <div class="template-status">
+      <span>原规格书状态</span>
+      <strong>暂未导入</strong>
+    </div>
+  </aside>
+
+  <section class="table-wrap">
+    <div class="section-heading">
+      <div>
+        <h2>接口列表</h2>
+        <p>按方向、状态和版本查看接口。</p>
+      </div>
+      <div class="filters">
+        <span class="filter active">全部</span>
+        <span class="filter">EQP -> EAP</span>
+        <span class="filter">EAP -> EQP</span>
+        <span class="filter">草稿</span>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>接口编号</th>
+          <th>接口名称</th>
+          <th>方向</th>
+          <th>API 名称</th>
+          <th>调用方</th>
+          <th>提供方</th>
+          <th>版本</th>
+          <th>状态</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in interfaces %}
+        <tr>
+          <td>{{ item.code }}</td>
+          <td>{{ item.name }}</td>
+          <td>{{ "EQP -> EAP" if item.direction == "EQP_TO_EAP" else "EAP -> EQP" }}</td>
+          <td>{{ item.api_name }}</td>
+          <td>{{ item.caller }}</td>
+          <td>{{ item.provider }}</td>
+          <td>{{ item.version }}</td>
+          <td><span class="status-badge">{{ "草稿" if item.status == "DRAFT" else item.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="empty">暂无接口，请先新增接口。</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
 </div>
 
-<div class="table-wrap">
+<section class="table-wrap recent-panel">
+  <div class="section-heading">
+    <div>
+      <h2>最近导出记录</h2>
+      <p>查看最近生成的规格书文件。</p>
+    </div>
+  </div>
+  {% if recent_exports %}
   <table>
     <thead>
       <tr>
-        <th>接口编号</th>
-        <th>接口名称</th>
-        <th>方向</th>
-        <th>API 名称</th>
-        <th>调用方</th>
-        <th>提供方</th>
-        <th>版本</th>
-        <th>状态</th>
+        <th>格式</th>
+        <th>水印</th>
+        <th>结果</th>
+        <th>文件路径</th>
       </tr>
     </thead>
     <tbody>
-      {% for item in interfaces %}
+      {% for record in recent_exports %}
       <tr>
-        <td>{{ item.code }}</td>
-        <td>{{ item.name }}</td>
-        <td>{{ "EQP -> EAP" if item.direction == "EQP_TO_EAP" else "EAP -> EQP" }}</td>
-        <td>{{ item.api_name }}</td>
-        <td>{{ item.caller }}</td>
-        <td>{{ item.provider }}</td>
-        <td>{{ item.version }}</td>
-        <td>{{ item.status }}</td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="8" class="empty">暂无接口，请先新增接口。</td>
+        <td>{{ record.formats }}</td>
+        <td>{{ record.watermark_text or "无" }}</td>
+        <td>{{ record.result }}</td>
+        <td>{{ record.output_path }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+  {% else %}
+  <p class="empty empty-block">暂无导出记录。</p>
+  {% endif %}
+</section>
 {% endblock %}
