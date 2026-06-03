@@ -117,21 +117,6 @@ body {
   font-size: 28px;
 }
 
-.workspace-grid {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 18px;
-  align-items: start;
-}
-
-.side-panel {
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.side-panel h2,
 .section-heading h2 {
   margin: 0;
   font-size: 18px;
@@ -149,35 +134,6 @@ body {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 13px;
-}
-
-.action-row {
-  display: grid;
-  gap: 4px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
-  text-decoration: none;
-}
-
-.action-row span,
-.template-status span {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.template-status {
-  display: grid;
-  gap: 4px;
-  margin-top: 14px;
-  padding: 12px;
-  background: #f8fafc;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.template-status strong {
-  color: var(--warning);
 }
 
 .filters {
@@ -227,11 +183,71 @@ button {
 }
 
 .table-wrap,
-.form-panel {
+.form-panel,
+.quick-actions-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   padding: 16px;
   border-radius: 8px;
+}
+
+.quick-actions-panel {
+  margin-bottom: 18px;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.action-card {
+  display: grid;
+  align-content: start;
+  min-height: 92px;
+  gap: 6px;
+  padding: 14px;
+  color: var(--text);
+  text-decoration: none;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.action-card:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.action-card span,
+.template-status span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.template-status strong {
+  color: var(--warning);
+}
+
+.interface-list-panel {
+  margin-bottom: 18px;
+}
+
+.interface-table-scroll {
+  max-height: 500px;
+  overflow: auto;
+  border: 1px solid var(--line);
+}
+
+.interface-table-scroll table {
+  min-width: 980px;
+}
+
+.interface-table-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 table {
@@ -343,7 +359,11 @@ textarea {
   }
 
   .stats-grid,
-  .workspace-grid {
+  .quick-actions-grid {
     grid-template-columns: 1fr;
+  }
+
+  .interface-table-scroll {
+    max-height: 420px;
   }
 }

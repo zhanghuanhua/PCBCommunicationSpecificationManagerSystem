@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory="app/templates")
 def home(request: Request, session: Session = Depends(get_session)):
     interfaces = session.exec(select(ApiInterface).order_by(ApiInterface.code)).all()
     recent_exports = session.exec(
-        select(ExportRecord).order_by(ExportRecord.created_at.desc()).limit(5)
+        select(ExportRecord).order_by(ExportRecord.created_at.desc()).limit(2)
     ).all()
     stats = {
         "total": len(interfaces),

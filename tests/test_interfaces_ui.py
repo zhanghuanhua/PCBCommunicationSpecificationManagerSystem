@@ -19,6 +19,18 @@ def test_home_page_shows_interface_workspace_actions():
     assert "最近导出记录" in response.text
 
 
+def test_home_page_uses_vertical_workspace_layout():
+    client = TestClient(app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'class="quick-actions-panel"' in response.text
+    assert "interface-list-panel" in response.text
+    assert 'class="interface-table-scroll"' in response.text
+    assert "workspace-grid" not in response.text
+
+
 def test_new_interface_page_shows_create_form():
     client = TestClient(app)
 

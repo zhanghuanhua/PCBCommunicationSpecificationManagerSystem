@@ -33,40 +33,47 @@
   </div>
 </section>
 
-<div class="workspace-grid">
-  <aside class="side-panel">
-    <h2>快捷操作</h2>
-    <a class="action-row" href="/interfaces/new">
+<section class="quick-actions-panel">
+  <div class="section-heading">
+    <div>
+      <h2>快捷操作</h2>
+      <p>常用功能集中入口。</p>
+    </div>
+  </div>
+  <div class="quick-actions-grid">
+    <a class="action-card" href="/interfaces/new">
       <strong>新增接口</strong>
       <span>创建 EQP 上报或 EAP 下发接口</span>
     </a>
-    <a class="action-row" href="/imports/spec">
+    <a class="action-card" href="/imports/spec">
       <strong>导入原规格书</strong>
       <span>上传现有 Word，作为后续导出模板</span>
     </a>
-    <a class="action-row" href="/exports">
+    <a class="action-card" href="/exports">
       <strong>导出规格书</strong>
       <span>选择 Word、PDF、Markdown 和水印</span>
     </a>
-    <div class="template-status">
+    <div class="action-card template-status">
       <span>原规格书状态</span>
       <strong>暂未导入</strong>
     </div>
-  </aside>
+  </div>
+</section>
 
-  <section class="table-wrap">
-    <div class="section-heading">
-      <div>
-        <h2>接口列表</h2>
-        <p>按方向、状态和版本查看接口。</p>
-      </div>
-      <div class="filters">
-        <span class="filter active">全部</span>
-        <span class="filter">EQP -> EAP</span>
-        <span class="filter">EAP -> EQP</span>
-        <span class="filter">草稿</span>
-      </div>
+<section class="table-wrap interface-list-panel">
+  <div class="section-heading">
+    <div>
+      <h2>接口列表</h2>
+      <p>按方向、状态和版本查看接口。</p>
     </div>
+    <div class="filters">
+      <span class="filter active">全部</span>
+      <span class="filter">EQP -> EAP</span>
+      <span class="filter">EAP -> EQP</span>
+      <span class="filter">草稿</span>
+    </div>
+  </div>
+  <div class="interface-table-scroll">
     <table>
       <thead>
         <tr>
@@ -99,8 +106,8 @@
         {% endfor %}
       </tbody>
     </table>
-  </section>
-</div>
+  </div>
+</section>
 
 <section class="table-wrap recent-panel">
   <div class="section-heading">
