@@ -13,11 +13,17 @@ def export_word_document(
     request_examples: dict[int, dict],
     response_examples: dict[int, dict],
     watermark_text: str = "",
+    template_path: Path | None = None,
 ) -> Path:
-    document = Document()
+    document = Document(template_path) if template_path else Document()
     add_text_watermark(document, watermark_text)
-    document.add_heading("珠海超毅 EAP-EQP API 接口通讯规格书", level=0)
-    document.add_paragraph("本文档由接口管理系统自动生成。")
+    if template_path:
+        document.add_page_break()
+        document.add_heading("系统新增接口内容", level=1)
+        document.add_paragraph("以下内容由接口管理系统自动追加。")
+    else:
+        document.add_heading("珠海超毅 EAP-EQP API 接口通讯规格书", level=0)
+        document.add_paragraph("本文档由接口管理系统自动生成。")
 
     _append_direction(
         document,

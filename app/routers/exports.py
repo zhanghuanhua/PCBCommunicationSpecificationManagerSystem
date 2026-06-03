@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.models import ApiInterface, ExportRecord
+from app.models import ApiInterface, ExportRecord, SpecTemplate
 from app.services.examples import build_request_example, build_response_example
 from app.services.markdown_export import render_markdown_document
 from app.services.pdf_export import export_basic_pdf
@@ -39,6 +39,8 @@ def run_export(
     output_files: list[str] = []
     watermark = watermark_text if watermark_enabled else ""
     export_dir = Path("exports")
+    template = session.exec(select(SpecTemplate).order_by(SpecTemplate.created_at.desc())).first()
+    template_path = Path(template.stored_path) if template else None
 
     if export_format in {"markdown", "all"}:
         markdown_path = export_dir / "EAP-EQP接口通讯规格书.md"
@@ -50,7 +52,14 @@ def run_export(
 
     if export_format in {"word", "word_pdf", "all"}:
         word_path = export_dir / "EAP-EQP接口通讯规格书.docx"
-        export_word_document(word_path, interfaces, request_examples, response_examples, watermark)
+        export_word_document(
+            word_path,
+            interfaces,
+            request_examples,
+            response_examples,
+            watermark,
+            template_path=template_path,
+        )
         output_files.append(str(word_path))
 
     if export_format in {"pdf", "word_pdf", "all"}:
