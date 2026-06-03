@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 from zipfile import BadZipFile
@@ -63,12 +64,21 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
     except (BadZipFile, ValueError):
         parsed = []
     created: list[ParsedInterface] = []
-    skipped: list[ParsedInterface] = []
+    updated: list[ParsedInterface] = []
 
     for item in parsed:
         exists = session.exec(select(ApiInterface).where(ApiInterface.code == item.code)).first()
         if exists:
-            skipped.append(item)
+            exists.name = item.name
+            exists.direction = item.direction
+            exists.api_name = item.api_name
+            exists.caller = item.caller
+            exists.provider = item.provider
+            exists.version = "4.0"
+            exists.status = InterfaceStatus.DRAFT
+            exists.updated_at = datetime.now(UTC)
+            session.add(exists)
+            updated.append(item)
             continue
         interface = ApiInterface(
             code=item.code,
@@ -87,9 +97,9 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
     return {
         "parsed_total": len(parsed),
         "created_total": len(created),
-        "skipped_total": len(skipped),
+        "updated_total": len(updated),
         "eqp_to_eap_total": sum(1 for item in parsed if item.code.startswith("EQP-EAP-")),
         "eap_to_eqp_total": sum(1 for item in parsed if item.code.startswith("EAP-EQP-")),
         "created": created,
-        "skipped": skipped,
+        "updated": updated,
     }

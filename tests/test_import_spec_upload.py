@@ -121,7 +121,7 @@ def test_upload_docx_parses_interface_basics_and_shows_result(client_with_engine
     assert interfaces[1].code == "EQP-EAP-010"
 
 
-def test_upload_docx_skips_existing_interface_codes(client_with_engine, tmp_path):
+def test_upload_docx_updates_existing_interface_codes(client_with_engine, tmp_path):
     client, engine = client_with_engine
     docx_path = tmp_path / "source.docx"
     document = Document()
@@ -129,22 +129,38 @@ def test_upload_docx_skips_existing_interface_codes(client_with_engine, tmp_path
     document.add_paragraph("接口名称 EQP_StatusReport")
     document.save(docx_path)
 
-    for _ in range(2):
-        response = client.post(
-            "/imports/spec",
-            files={
-                "spec_file": (
-                    "原规格书.docx",
-                    docx_path.read_bytes(),
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                )
-            },
-        )
+    client.post(
+        "/imports/spec",
+        files={
+            "spec_file": (
+                "原规格书.docx",
+                docx_path.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+    updated_docx_path = tmp_path / "updated.docx"
+    updated_document = Document()
+    updated_document.add_heading("EQP-EAP-010 设备状态变更上报", level=2)
+    updated_document.add_paragraph("接口名称 EQP_StatusChanged")
+    updated_document.save(updated_docx_path)
+    response = client.post(
+        "/imports/spec",
+        files={
+            "spec_file": (
+                "原规格书.docx",
+                updated_docx_path.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
 
     assert response.status_code == 200
-    assert "已存在跳过" in response.text
+    assert "已存在覆盖" in response.text
 
     with Session(engine) as session:
         interfaces = session.exec(select(ApiInterface)).all()
 
     assert len(interfaces) == 1
+    assert interfaces[0].name == "设备状态变更上报"
+    assert interfaces[0].api_name == "EQP_StatusChanged"

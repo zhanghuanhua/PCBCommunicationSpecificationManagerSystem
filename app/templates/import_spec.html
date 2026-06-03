@@ -38,8 +38,8 @@
         <strong>{{ import_result.eap_to_eqp_total }}</strong>
       </div>
       <div class="stat-card">
-        <span>已存在跳过</span>
-        <strong>{{ import_result.skipped_total }}</strong>
+        <span>已存在覆盖</span>
+        <strong>{{ import_result.updated_total }}</strong>
       </div>
     </div>
     {% if import_result.created %}
@@ -64,7 +64,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="empty empty-block">没有新增接口，可能是接口编号已存在。</p>
+    <p class="empty empty-block">没有新增接口，已存在的接口已按本次解析结果覆盖基础信息。</p>
     {% endif %}
   </section>
   {% endif %}
