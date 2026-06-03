@@ -55,7 +55,12 @@
     </a>
     <div class="action-card template-status">
       <span>原规格书状态</span>
+      {% if template %}
+      <strong>已导入</strong>
+      <span>{{ template.original_filename }}</span>
+      {% else %}
       <strong>暂未导入</strong>
+      {% endif %}
     </div>
   </div>
 </section>

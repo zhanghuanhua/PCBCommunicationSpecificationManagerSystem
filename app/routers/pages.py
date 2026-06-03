@@ -3,7 +3,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.models import ApiInterface, ExportRecord, InterfaceDirection, InterfaceStatus
+from app.models import ApiInterface, ExportRecord, InterfaceDirection, InterfaceStatus, SpecTemplate
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -15,6 +15,7 @@ def home(request: Request, session: Session = Depends(get_session)):
     recent_exports = session.exec(
         select(ExportRecord).order_by(ExportRecord.created_at.desc()).limit(2)
     ).all()
+    template = session.exec(select(SpecTemplate).order_by(SpecTemplate.created_at.desc())).first()
     stats = {
         "total": len(interfaces),
         "eqp_to_eap": sum(1 for item in interfaces if item.direction == InterfaceDirection.EQP_TO_EAP),
@@ -29,6 +30,7 @@ def home(request: Request, session: Session = Depends(get_session)):
             "interfaces": interfaces,
             "recent_exports": recent_exports,
             "stats": stats,
+            "template": template,
         },
     )
 
@@ -52,5 +54,6 @@ def import_spec(request: Request):
         "import_spec.html",
         {
             "title": "导入原规格书",
+            "template": None,
         },
     )

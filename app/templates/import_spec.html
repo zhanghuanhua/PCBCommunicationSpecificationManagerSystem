@@ -10,29 +10,37 @@
 </section>
 
 <section class="form-panel import-panel">
-  <label>
-    选择 Word 文件
-    <input type="file" accept=".docx">
-  </label>
-  <div class="radio-list">
-    <label class="radio-row">
-      <input type="radio" checked>
-      <span>
-        <strong>作为模板导入</strong>
-        <small>保留原文档内容，导出时在接口章节后追加系统新增接口。</small>
-      </span>
-    </label>
-    <label class="radio-row disabled">
-      <input type="radio" disabled>
-      <span>
-        <strong>解析接口草稿</strong>
-        <small>读取文档接口内容并生成待确认接口数据，后续版本支持。</small>
-      </span>
-    </label>
+  {% if message %}
+  <div class="success-block">
+    <strong>{{ message }}</strong>
+    <span>{{ template.original_filename }}</span>
   </div>
-  <div class="actions">
-    <button type="button" disabled>开始导入</button>
-    <a href="/">返回工作台</a>
-  </div>
+  {% endif %}
+  <form method="post" action="/imports/spec" enctype="multipart/form-data">
+    <label>
+      选择 Word 文件
+      <input type="file" name="spec_file" accept=".docx" required>
+    </label>
+    <div class="radio-list">
+      <label class="radio-row">
+        <input type="radio" checked>
+        <span>
+          <strong>作为模板导入</strong>
+          <small>保留原文档内容，导出时在接口章节后追加系统新增接口。</small>
+        </span>
+      </label>
+      <label class="radio-row disabled">
+        <input type="radio" disabled>
+        <span>
+          <strong>解析接口草稿</strong>
+          <small>读取文档接口内容并生成待确认接口数据，后续版本支持。</small>
+        </span>
+      </label>
+    </div>
+    <div class="actions">
+      <button type="submit">开始导入</button>
+      <a href="/">返回工作台</a>
+    </div>
+  </form>
 </section>
 {% endblock %}

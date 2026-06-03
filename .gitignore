@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 *.pyc
 data/*.db
+data/templates/
 exports/*.docx
 exports/*.pdf
 exports/*.md

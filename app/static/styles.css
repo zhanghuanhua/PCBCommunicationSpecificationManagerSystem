@@ -287,6 +287,21 @@ th {
   border: 1px dashed var(--line);
 }
 
+.success-block {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #166534;
+}
+
+.success-block span {
+  color: #15803d;
+  font-size: 13px;
+}
+
 .recent-panel {
   margin-top: 18px;
 }

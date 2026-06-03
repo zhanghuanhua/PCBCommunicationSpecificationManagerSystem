@@ -67,3 +67,12 @@ class ExportRecord(SQLModel, table=True):
     output_path: str = ""
     result: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SpecTemplate(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    original_filename: str
+    stored_path: str
+    file_size: int = 0
+    status: str = "IMPORTED"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
