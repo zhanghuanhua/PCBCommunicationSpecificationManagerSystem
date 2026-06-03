@@ -95,7 +95,7 @@
       <tbody>
         {% for item in interfaces %}
         <tr>
-          <td>{{ item.code }}</td>
+          <td><a href="/interfaces/{{ item.id }}">{{ item.code }}</a></td>
           <td>{{ item.name }}</td>
           <td>{{ "EQP -> EAP" if item.direction == "EQP_TO_EAP" else "EAP -> EQP" }}</td>
           <td>{{ item.api_name }}</td>

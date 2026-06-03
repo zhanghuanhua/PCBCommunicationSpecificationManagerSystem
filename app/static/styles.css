@@ -77,6 +77,10 @@ body {
   color: var(--muted);
 }
 
+.compact-hero {
+  align-items: center;
+}
+
 .eyebrow {
   font-size: 12px;
   font-weight: 700;
@@ -312,6 +316,36 @@ th {
   max-width: 780px;
 }
 
+.detail-grid,
+.parameter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.parameter-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.parameter-form {
+  max-width: none;
+}
+
+.checkbox-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.checkbox-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -374,7 +408,9 @@ textarea {
   }
 
   .stats-grid,
-  .quick-actions-grid {
+  .quick-actions-grid,
+  .detail-grid,
+  .parameter-grid {
     grid-template-columns: 1fr;
   }
 

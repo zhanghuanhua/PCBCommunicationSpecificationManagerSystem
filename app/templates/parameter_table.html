@@ -1,0 +1,28 @@
+{% if parameters %}
+<table>
+  <thead>
+    <tr>
+      <th>字段名</th>
+      <th>类型</th>
+      <th>必填</th>
+      <th>数组</th>
+      <th>示例值</th>
+      <th>说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for parameter in parameters %}
+    <tr>
+      <td>{{ parameter.field_name }}</td>
+      <td>{{ parameter.data_type }}</td>
+      <td>{{ "是" if parameter.required else "否" }}</td>
+      <td>{{ "是" if parameter.is_array else "否" }}</td>
+      <td>{{ parameter.example_value }}</td>
+      <td>{{ parameter.description }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty empty-block">暂无参数。</p>
+{% endif %}

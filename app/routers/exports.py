@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.models import ApiInterface, ExportRecord, SpecTemplate
+from app.models import ApiInterface, ApiParameter, ExportRecord, SpecTemplate
 from app.services.examples import build_request_example, build_response_example
 from app.services.markdown_export import render_markdown_document
 from app.services.pdf_export import export_basic_pdf
@@ -34,8 +34,19 @@ def run_export(
     session: Session = Depends(get_session),
 ):
     interfaces = session.exec(select(ApiInterface).order_by(ApiInterface.code)).all()
-    request_examples = {item.id or 0: build_request_example(item, []) for item in interfaces}
-    response_examples = {item.id or 0: build_response_example(item, []) for item in interfaces}
+    parameters = session.exec(select(ApiParameter).order_by(ApiParameter.sort_order, ApiParameter.id)).all()
+    parameters_by_interface = {
+        item.id or 0: [parameter for parameter in parameters if parameter.interface_id == item.id]
+        for item in interfaces
+    }
+    request_examples = {
+        item.id or 0: build_request_example(item, parameters_by_interface[item.id or 0])
+        for item in interfaces
+    }
+    response_examples = {
+        item.id or 0: build_response_example(item, parameters_by_interface[item.id or 0])
+        for item in interfaces
+    }
     output_files: list[str] = []
     watermark = watermark_text if watermark_enabled else ""
     export_dir = Path("exports")
