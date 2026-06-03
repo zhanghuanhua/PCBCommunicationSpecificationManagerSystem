@@ -306,6 +306,19 @@ th {
   font-size: 13px;
 }
 
+.parse-result-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.import-stats-grid {
+  margin-bottom: 0;
+}
+
 .recent-panel {
   margin-top: 18px;
 }

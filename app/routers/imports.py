@@ -1,13 +1,15 @@
 from pathlib import Path
 from uuid import uuid4
+from zipfile import BadZipFile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.templating import Jinja2Templates
-from sqlmodel import Session
+from sqlmodel import Session, select
 from starlette.status import HTTP_400_BAD_REQUEST
 
 from app.database import get_session
-from app.models import SpecTemplate
+from app.models import ApiInterface, InterfaceStatus, SpecTemplate
+from app.services.spec_parser import ParsedInterface, parse_interface_basics_from_docx
 
 router = APIRouter(prefix="/imports")
 templates = Jinja2Templates(directory="app/templates")
@@ -41,6 +43,7 @@ async def upload_spec_template(
     session.add(template)
     session.commit()
     session.refresh(template)
+    import_result = _save_parsed_interfaces(stored_path, session)
 
     return templates.TemplateResponse(
         request,
@@ -49,5 +52,44 @@ async def upload_spec_template(
             "title": "导入原规格书",
             "template": template,
             "message": "导入成功",
+            "import_result": import_result,
         },
     )
+
+
+def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
+    try:
+        parsed = parse_interface_basics_from_docx(docx_path)
+    except (BadZipFile, ValueError):
+        parsed = []
+    created: list[ParsedInterface] = []
+    skipped: list[ParsedInterface] = []
+
+    for item in parsed:
+        exists = session.exec(select(ApiInterface).where(ApiInterface.code == item.code)).first()
+        if exists:
+            skipped.append(item)
+            continue
+        interface = ApiInterface(
+            code=item.code,
+            name=item.name,
+            direction=item.direction,
+            api_name=item.api_name,
+            caller=item.caller,
+            provider=item.provider,
+            version="4.0",
+            status=InterfaceStatus.DRAFT,
+        )
+        session.add(interface)
+        created.append(item)
+
+    session.commit()
+    return {
+        "parsed_total": len(parsed),
+        "created_total": len(created),
+        "skipped_total": len(skipped),
+        "eqp_to_eap_total": sum(1 for item in parsed if item.code.startswith("EQP-EAP-")),
+        "eap_to_eqp_total": sum(1 for item in parsed if item.code.startswith("EAP-EQP-")),
+        "created": created,
+        "skipped": skipped,
+    }

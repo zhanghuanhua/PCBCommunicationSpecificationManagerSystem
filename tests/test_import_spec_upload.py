@@ -1,12 +1,13 @@
 from pathlib import Path
 
 import pytest
+from docx import Document
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.database import get_session
 from app.main import app
-from app.models import SpecTemplate
+from app.models import ApiInterface, SpecTemplate
 from app.routers import imports
 
 
@@ -83,3 +84,67 @@ def test_home_page_shows_imported_template_status(client_with_engine):
     assert response.status_code == 200
     assert "已导入" in response.text
     assert "原规格书.docx" in response.text
+
+
+def test_upload_docx_parses_interface_basics_and_shows_result(client_with_engine, tmp_path):
+    client, engine = client_with_engine
+    docx_path = tmp_path / "source.docx"
+    document = Document()
+    document.add_heading("EQP-EAP-010 设备状态上报", level=2)
+    document.add_paragraph("接口名称 EQP_StatusReport")
+    document.add_heading("EAP-EQP-011 启动设备", level=2)
+    document.add_paragraph("接口名称 EAP_StartMachine")
+    document.save(docx_path)
+
+    response = client.post(
+        "/imports/spec",
+        files={
+            "spec_file": (
+                "原规格书.docx",
+                docx_path.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert "本次解析结果" in response.text
+    assert "解析接口总数" in response.text
+    assert "EQP-EAP-010" in response.text
+    assert "EAP-EQP-011" in response.text
+
+    with Session(engine) as session:
+        interfaces = session.exec(select(ApiInterface).order_by(ApiInterface.code)).all()
+
+    assert len(interfaces) == 2
+    assert interfaces[0].code == "EAP-EQP-011"
+    assert interfaces[1].code == "EQP-EAP-010"
+
+
+def test_upload_docx_skips_existing_interface_codes(client_with_engine, tmp_path):
+    client, engine = client_with_engine
+    docx_path = tmp_path / "source.docx"
+    document = Document()
+    document.add_heading("EQP-EAP-010 设备状态上报", level=2)
+    document.add_paragraph("接口名称 EQP_StatusReport")
+    document.save(docx_path)
+
+    for _ in range(2):
+        response = client.post(
+            "/imports/spec",
+            files={
+                "spec_file": (
+                    "原规格书.docx",
+                    docx_path.read_bytes(),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+        )
+
+    assert response.status_code == 200
+    assert "已存在跳过" in response.text
+
+    with Session(engine) as session:
+        interfaces = session.exec(select(ApiInterface)).all()
+
+    assert len(interfaces) == 1
