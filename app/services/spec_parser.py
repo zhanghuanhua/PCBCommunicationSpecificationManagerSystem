@@ -114,7 +114,7 @@ def _build_text_index_by_block_index(blocks: list[dict]) -> dict[int, int]:
 
 
 def _extract_name(line: str, code: str) -> str:
-    name = re.sub(r"^[\s:?-]+", "", line.replace(code, "", 1))
+    name = re.sub(r"^[\s:：-]+", "", line.replace(code, "", 1))
     return re.sub(r"\s+", " ", name)
 
 
@@ -147,8 +147,10 @@ def _extract_parameters_for_interface(blocks: list[dict], start_block_index: int
                 break
             current_kind = _parameter_kind_from_text(text) or current_kind
             continue
-        if block["type"] == "table" and current_kind:
-            parameters.extend(_parse_parameter_table(block["rows"], current_kind))
+        if block["type"] == "table":
+            if current_kind:
+                parameters.extend(_parse_parameter_table(block["rows"], current_kind))
+            parameters.extend(_parse_sectioned_parameter_table(block["rows"]))
 
     return parameters
 
@@ -157,7 +159,7 @@ def _parameter_kind_from_text(text: str) -> ParameterKind | None:
     compact = text.replace(" ", "")
     if "请求参数" in compact or "Request" in text:
         return ParameterKind.REQUEST
-    if "响应参数" in compact or "Response" in text:
+    if "响应参数" in compact or "返回值" in compact or "应答参数" in compact or "Response" in text:
         return ParameterKind.RESPONSE
     return None
 
@@ -166,7 +168,7 @@ def _parse_parameter_table(rows: list[list[str]], kind: ParameterKind) -> list[P
     if len(rows) < 2:
         return []
     headers = [_normalize_header(value) for value in rows[0]]
-    field_index = _find_header_index(headers, {"字段名", "参数名", "field", "name"})
+    field_index = _find_header_index(headers, {"字段名", "字段", "参数名", "field", "name"})
     type_index = _find_header_index(headers, {"类型", "数据类型", "type"})
     required_index = _find_header_index(headers, {"必填", "是否必填", "required"})
     example_index = _find_header_index(headers, {"示例值", "示例", "example"})
@@ -191,6 +193,70 @@ def _parse_parameter_table(rows: list[list[str]], kind: ParameterKind) -> list[P
             )
         )
     return parsed
+
+
+def _parse_sectioned_parameter_table(rows: list[list[str]]) -> list[ParsedParameter]:
+    parsed: list[ParsedParameter] = []
+    current_kind: ParameterKind | None = None
+    field_index: int | None = None
+    type_index: int | None = None
+    desc_index: int | None = None
+    in_content = False
+
+    for row in rows:
+        row_text = "".join(row).replace(" ", "")
+        if not row_text:
+            continue
+        if "返回值列表" in row_text or "响应参数列表" in row_text or "应答参数列表" in row_text:
+            current_kind = ParameterKind.RESPONSE
+            in_content = False
+            field_index = type_index = desc_index = None
+            continue
+        if "请求参数列表" in row_text or row_text == "参数列表" * len(row):
+            current_kind = ParameterKind.REQUEST
+            in_content = False
+            field_index = type_index = desc_index = None
+            continue
+
+        headers = [_normalize_header(value) for value in row]
+        detected_field_index = _find_header_index(headers, {"字段名", "字段", "参数名", "field", "name"})
+        detected_type_index = _find_header_index(headers, {"类型", "数据类型", "type"})
+        detected_desc_index = _find_header_index(headers, {"说明", "描述", "description", "remark"})
+        if detected_field_index is not None and detected_type_index is not None:
+            field_index = detected_field_index
+            type_index = detected_type_index
+            desc_index = detected_desc_index
+            in_content = False
+            continue
+
+        if current_kind and _is_content_marker(row):
+            in_content = True
+            continue
+
+        if not current_kind or not in_content or field_index is None or type_index is None:
+            continue
+
+        field_name = _cell(row, field_index)
+        data_type = _cell(row, type_index)
+        if not field_name or not data_type or field_name.lower() == "content":
+            continue
+        parsed.append(
+            ParsedParameter(
+                kind=current_kind,
+                field_name=field_name,
+                data_type=data_type,
+                required=True,
+                example_value="",
+                description=_cell(row, desc_index) or field_name,
+            )
+        )
+
+    return parsed
+
+
+def _is_content_marker(row: list[str]) -> bool:
+    values = [value.strip().lower() for value in row if value.strip()]
+    return bool(values) and all(value == "content" for value in values)
 
 
 def _normalize_header(value: str) -> str:

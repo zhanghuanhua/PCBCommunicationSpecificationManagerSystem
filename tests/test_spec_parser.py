@@ -66,3 +66,37 @@ def test_parse_interface_basics_from_docx_extracts_request_and_response_paramete
     assert result[0].parameters[0].description == "批次号"
     assert result[0].parameters[1].kind == ParameterKind.RESPONSE
     assert result[0].parameters[1].field_name == "Result"
+
+
+def test_parse_interface_table_sections_extracts_content_parameters(tmp_path: Path):
+    docx_path = tmp_path / "spec_table_sections.docx"
+    document = Document()
+    document.add_heading("EAP-EQP-001 初始化状态请求", level=2)
+    table = document.add_table(rows=0, cols=4)
+    for values in [
+        ["接口名称", "EAP_InitialDataRequest", "EAP_InitialDataRequest", "EAP_InitialDataRequest"],
+        ["请求参数列表", "请求参数列表", "请求参数列表", "请求参数列表"],
+        ["序号", "字段", "类型", "描述"],
+        ["1", "From", "string", "调用接口来源"],
+        ["4", "Content", "object", "参数内容"],
+        ["Content", "Content", "Content", "Content"],
+        ["4.1", "EqpId", "string", "设备 ID"],
+        ["返回值列表", "返回值列表", "返回值列表", "返回值列表"],
+        ["序号", "字段", "类型", "描述"],
+        ["1", "Code", "string", "结果代码"],
+        ["5", "Content", "object", "参数内容"],
+        ["Content", "Content", "Content", "Content"],
+        ["5.1", "ControlMode", "string", "控制模式"],
+    ]:
+        row = table.add_row()
+        for index, value in enumerate(values):
+            row.cells[index].text = value
+    document.save(docx_path)
+
+    result = parse_interface_basics_from_docx(docx_path)
+
+    assert len(result) == 1
+    request_parameters = [item for item in result[0].parameters if item.kind == ParameterKind.REQUEST]
+    response_parameters = [item for item in result[0].parameters if item.kind == ParameterKind.RESPONSE]
+    assert [item.field_name for item in request_parameters] == ["EqpId"]
+    assert [item.field_name for item in response_parameters] == ["ControlMode"]
