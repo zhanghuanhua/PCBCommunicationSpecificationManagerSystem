@@ -13,27 +13,73 @@
   </div>
 </section>
 
-<section class="detail-grid">
-  <div class="table-wrap">
-    <div class="section-heading">
-      <div>
-        <h2>接口信息</h2>
-        <p>维护接口基础说明和调用关系。</p>
+<section class="interface-detail-layout">
+  <div class="detail-main">
+    <div class="table-wrap">
+      <div class="section-heading">
+        <div>
+          <h2>接口信息</h2>
+          <p>维护接口基础说明和调用关系。</p>
+        </div>
       </div>
+      <table>
+        <tbody>
+          <tr><th>接口编号</th><td>{{ interface.code }}</td></tr>
+          <tr><th>接口名称</th><td>{{ interface.name }}</td></tr>
+          <tr><th>调用方</th><td>{{ interface.caller }}</td></tr>
+          <tr><th>提供方</th><td>{{ interface.provider }}</td></tr>
+          <tr><th>版本</th><td>{{ interface.version }}</td></tr>
+          <tr><th>状态</th><td><span class="status-badge">{{ "草稿" if interface.status == "DRAFT" else interface.status }}</span></td></tr>
+        </tbody>
+      </table>
     </div>
-    <table>
-      <tbody>
-        <tr><th>接口编号</th><td>{{ interface.code }}</td></tr>
-        <tr><th>接口名称</th><td>{{ interface.name }}</td></tr>
-        <tr><th>调用方</th><td>{{ interface.caller }}</td></tr>
-        <tr><th>提供方</th><td>{{ interface.provider }}</td></tr>
-        <tr><th>版本</th><td>{{ interface.version }}</td></tr>
-        <tr><th>状态</th><td><span class="status-badge">{{ "草稿" if interface.status == "DRAFT" else interface.status }}</span></td></tr>
-      </tbody>
-    </table>
+
+    <div class="table-wrap">
+      <div class="section-heading">
+        <div>
+          <h2>请求参数</h2>
+          <p>接口请求 Content 中的字段。</p>
+        </div>
+      </div>
+      {% with parameters=request_parameters %}
+        {% include "parameter_table.html" %}
+      {% endwith %}
+    </div>
+
+    <div class="table-wrap">
+      <div class="section-heading">
+        <div>
+          <h2>响应参数</h2>
+          <p>接口响应 Content 中的字段。</p>
+        </div>
+      </div>
+      {% with parameters=response_parameters %}
+        {% include "parameter_table.html" %}
+      {% endwith %}
+    </div>
+
+    <form class="form-panel log-example-panel" method="post" action="/interfaces/{{ interface.id }}/log-examples">
+      <div class="section-heading">
+        <div>
+          <h2>日志范例</h2>
+          <p>可直接修改请求和响应日志范例，保存后用于后续导出。</p>
+        </div>
+      </div>
+      <label>
+        请求日志范例
+        <textarea class="log-example-textarea" name="request_log_example">{{ interface.request_log_example }}</textarea>
+      </label>
+      <label>
+        响应日志范例
+        <textarea class="log-example-textarea" name="response_log_example">{{ interface.response_log_example }}</textarea>
+      </label>
+      <div class="actions">
+        <button type="submit">保存日志范例</button>
+      </div>
+    </form>
   </div>
 
-  <form class="form-panel parameter-form" method="post" action="/interfaces/{{ interface.id }}/parameters">
+  <form class="form-panel parameter-form detail-side-panel" method="post" action="/interfaces/{{ interface.id }}/parameters">
     <div class="section-heading">
       <div>
         <h2>新增参数</h2>
@@ -71,31 +117,5 @@
       <button type="submit">保存参数</button>
     </div>
   </form>
-</section>
-
-<section class="parameter-grid">
-  <div class="table-wrap">
-    <div class="section-heading">
-      <div>
-        <h2>请求参数</h2>
-        <p>接口请求 Content 中的字段。</p>
-      </div>
-    </div>
-    {% with parameters=request_parameters %}
-      {% include "parameter_table.html" %}
-    {% endwith %}
-  </div>
-
-  <div class="table-wrap">
-    <div class="section-heading">
-      <div>
-        <h2>响应参数</h2>
-        <p>接口响应 Content 中的字段。</p>
-      </div>
-    </div>
-    {% with parameters=response_parameters %}
-      {% include "parameter_table.html" %}
-    {% endwith %}
-  </div>
 </section>
 {% endblock %}

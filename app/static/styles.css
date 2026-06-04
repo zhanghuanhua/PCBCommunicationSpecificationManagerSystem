@@ -330,12 +330,22 @@ th {
 }
 
 .detail-grid,
-.parameter-grid {
+.parameter-grid,
+.interface-detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 18px;
   align-items: start;
   margin-bottom: 18px;
+}
+
+.interface-detail-layout {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.detail-main {
+  display: grid;
+  gap: 18px;
 }
 
 .parameter-grid {
@@ -344,6 +354,22 @@ th {
 
 .parameter-form {
   max-width: none;
+}
+
+.detail-side-panel {
+  position: sticky;
+  top: 78px;
+}
+
+.log-example-panel {
+  max-width: none;
+}
+
+.log-example-textarea {
+  min-height: 220px;
+  font-family: Consolas, "Courier New", monospace;
+  line-height: 1.5;
+  white-space: pre;
 }
 
 .checkbox-row {
@@ -423,8 +449,13 @@ textarea {
   .stats-grid,
   .quick-actions-grid,
   .detail-grid,
-  .parameter-grid {
+  .parameter-grid,
+  .interface-detail-layout {
     grid-template-columns: 1fr;
+  }
+
+  .detail-side-panel {
+    position: static;
   }
 
   .interface-table-scroll {

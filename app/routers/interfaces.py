@@ -112,3 +112,21 @@ def add_parameter(
     session.add(interface)
     session.commit()
     return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
+
+
+@router.post("/{interface_id}/log-examples")
+def save_log_examples(
+    interface_id: int,
+    request_log_example: str = Form(""),
+    response_log_example: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    interface = session.get(ApiInterface, interface_id)
+    if not interface:
+        raise HTTPException(status_code=404, detail="接口不存在")
+    interface.request_log_example = request_log_example
+    interface.response_log_example = response_log_example
+    interface.updated_at = datetime.now(UTC)
+    session.add(interface)
+    session.commit()
+    return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)

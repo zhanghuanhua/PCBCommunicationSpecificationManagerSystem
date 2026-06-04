@@ -38,6 +38,8 @@ class ApiInterface(SQLModel, table=True):
     module: str = ""
     status: InterfaceStatus = InterfaceStatus.DRAFT
     remark: str = ""
+    request_log_example: str = ""
+    response_log_example: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

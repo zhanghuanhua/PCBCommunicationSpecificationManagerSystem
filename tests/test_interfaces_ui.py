@@ -95,7 +95,12 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "设备状态上报" in response.text
     assert "请求参数" in response.text
     assert "响应参数" in response.text
+    assert "日志范例" in response.text
+    assert "请求日志范例" in response.text
+    assert "响应日志范例" in response.text
     assert "新增参数" in response.text
+    assert "interface-detail-layout" in response.text
+    assert "parameter-grid" not in response.text
 
 
 def test_add_parameter_to_interface_detail_page(tmp_path):
@@ -121,3 +126,23 @@ def test_add_parameter_to_interface_detail_page(tmp_path):
     assert "LotId" in response.text
     assert "批次号" in response.text
     assert "请求参数" in response.text
+
+
+def test_save_interface_log_examples(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}/log-examples",
+            data={
+                "request_log_example": "REST:POST /api/EQP_StatusReport\n{\"From\":\"EQP\"}",
+                "response_log_example": "{\"Code\":\"0000\",\"Success\":true}",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "REST:POST /api/EQP_StatusReport" in response.text
+    assert "Code" in response.text
+    assert "0000" in response.text
