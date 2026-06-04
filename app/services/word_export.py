@@ -3,7 +3,7 @@ from pathlib import Path
 
 from docx import Document
 
-from app.models import ApiInterface, InterfaceDirection
+from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
 from app.services.watermark import add_text_watermark
 
 
@@ -14,6 +14,7 @@ def export_word_document(
     response_examples: dict[int, dict],
     watermark_text: str = "",
     template_path: Path | None = None,
+    parameters_by_interface: dict[int, list[ApiParameter]] | None = None,
 ) -> Path:
     document = Document(template_path) if template_path else Document()
     add_text_watermark(document, watermark_text)
@@ -32,6 +33,7 @@ def export_word_document(
         "EQP -> EAP 接口",
         request_examples,
         response_examples,
+        parameters_by_interface or {},
     )
     _append_direction(
         document,
@@ -40,6 +42,7 @@ def export_word_document(
         "EAP -> EQP 接口",
         request_examples,
         response_examples,
+        parameters_by_interface or {},
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,6 +57,7 @@ def _append_direction(
     heading: str,
     request_examples: dict[int, dict],
     response_examples: dict[int, dict],
+    parameters_by_interface: dict[int, list[ApiParameter]],
 ) -> None:
     document.add_heading(heading, level=1)
     for item in interfaces:
@@ -70,13 +74,44 @@ def _append_direction(
         _add_row(table, "接口方式", "接口调用方", "接口提供方", "接口服务描述")
         _add_row(table, "Web API", item.caller, item.provider, item.service_description)
 
-        document.add_paragraph("请求示例")
-        document.add_paragraph(
-            json.dumps(request_examples.get(key, {}), ensure_ascii=False, indent=2)
-        )
-        document.add_paragraph("响应示例")
-        document.add_paragraph(
-            json.dumps(response_examples.get(key, {}), ensure_ascii=False, indent=2)
+        parameters = parameters_by_interface.get(key, [])
+        document.add_heading("请求参数", level=3)
+        _append_parameter_table(document, parameters, ParameterKind.REQUEST)
+        document.add_heading("响应参数", level=3)
+        _append_parameter_table(document, parameters, ParameterKind.RESPONSE)
+
+        document.add_heading("日志范例", level=3)
+        document.add_paragraph("请求日志范例")
+        document.add_paragraph(item.request_log_example or json.dumps(request_examples.get(key, {}), ensure_ascii=False, indent=2))
+        document.add_paragraph("响应日志范例")
+        document.add_paragraph(item.response_log_example or json.dumps(response_examples.get(key, {}), ensure_ascii=False, indent=2))
+
+
+def _append_parameter_table(
+    document: Document,
+    parameters: list[ApiParameter],
+    kind: ParameterKind,
+) -> None:
+    items = [
+        parameter
+        for parameter in sorted(parameters, key=lambda item: (item.sort_order, item.id or 0))
+        if parameter.kind == kind
+    ]
+    table = document.add_table(rows=1, cols=5)
+    headers = ["字段名", "类型", "必填", "数组", "说明"]
+    for index, header in enumerate(headers):
+        table.rows[0].cells[index].text = header
+    if not items:
+        _add_row(table, "无", "", "", "", "")
+        return
+    for parameter in items:
+        _add_row(
+            table,
+            parameter.field_name,
+            parameter.data_type,
+            "是" if parameter.required else "否",
+            "是" if parameter.is_array else "否",
+            parameter.description,
         )
 
 

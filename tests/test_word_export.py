@@ -2,7 +2,7 @@ from pathlib import Path
 
 from docx import Document
 
-from app.models import ApiInterface, InterfaceDirection
+from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
 from app.services.word_export import export_word_document
 
 
@@ -77,3 +77,77 @@ def test_word_export_appends_interfaces_to_imported_template(tmp_path: Path):
     assert "这是原规格书已有内容。" in body_text
     assert "系统新增接口内容" in body_text
     assert "EAP-EQP-009 启动设备" in body_text
+
+
+def test_word_export_includes_formal_parameter_tables_and_saved_log_examples(tmp_path: Path):
+    interface = ApiInterface(
+        id=1,
+        code="EAP-EQP-001",
+        name="初始化状态请求",
+        direction=InterfaceDirection.EAP_TO_EQP,
+        api_name="EAP_InitialDataRequest",
+        caller="EAP",
+        provider="EQP",
+        request_log_example='REST:POST http://IP:Port/api/EAP_InitialDataRequest\n{"Content":{"IP":"127.0.0.1"}}',
+        response_log_example='{"Code":"0000","Content":{"Result":true}}',
+    )
+    parameters = [
+        ApiParameter(
+            interface_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=1,
+            field_name="IP",
+            data_type="string",
+            required=True,
+            is_array=False,
+            example_value="127.0.0.1",
+            description="IP地址",
+        ),
+        ApiParameter(
+            interface_id=1,
+            kind=ParameterKind.RESPONSE,
+            sort_order=1,
+            field_name="Result",
+            data_type="bool",
+            required=False,
+            is_array=True,
+            example_value="true",
+            description="处理结果",
+        ),
+    ]
+    output = tmp_path / "spec_with_tables.docx"
+
+    export_word_document(
+        output,
+        [interface],
+        {1: {"Content": {"IP": "127.0.0.1"}}},
+        {1: {"Content": {"Result": True}}},
+        parameters_by_interface={1: parameters},
+    )
+
+    document = Document(output)
+    body_text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    table_text = "\n".join(
+        cell.text
+        for table in document.tables
+        for row in table.rows
+        for cell in row.cells
+    )
+
+    assert "请求参数" in body_text
+    assert "响应参数" in body_text
+    assert "日志范例" in body_text
+    assert "请求日志范例" in body_text
+    assert "响应日志范例" in body_text
+    assert "REST:POST http://IP:Port/api/EAP_InitialDataRequest" in body_text
+    assert '"IP":"127.0.0.1"' in body_text
+    assert '"Result":true' in body_text
+    assert "字段名" in table_text
+    assert "IP" in table_text
+    assert "string" in table_text
+    assert "是" in table_text
+    assert "否" in table_text
+    assert "IP地址" in table_text
+    assert "Result" in table_text
+    assert "bool" in table_text
+    assert "处理结果" in table_text

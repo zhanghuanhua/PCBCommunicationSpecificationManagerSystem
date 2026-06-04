@@ -70,6 +70,7 @@ def run_export(
             response_examples,
             watermark,
             template_path=template_path,
+            parameters_by_interface=parameters_by_interface,
         )
         output_files.append(str(word_path))
 
