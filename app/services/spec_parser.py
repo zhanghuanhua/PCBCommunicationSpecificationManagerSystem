@@ -34,6 +34,8 @@ class ParsedInterface:
     caller: str
     provider: str
     parameters: list[ParsedParameter]
+    request_log_example: str
+    response_log_example: str
 
 
 def parse_interface_basics_from_docx(docx_path: Path) -> list[ParsedInterface]:
@@ -62,6 +64,7 @@ def parse_interface_basics_from_docx(docx_path: Path) -> list[ParsedInterface]:
         api_name = _find_api_name(lines, text_index, code)
         direction, caller, provider = _direction_parties(code)
         parameters = _extract_parameters_for_interface(blocks, block_index)
+        request_log_example, response_log_example = _extract_log_examples_for_interface(blocks, block_index)
         parsed.append(
             ParsedInterface(
                 code=code,
@@ -71,6 +74,8 @@ def parse_interface_basics_from_docx(docx_path: Path) -> list[ParsedInterface]:
                 caller=caller,
                 provider=provider,
                 parameters=parameters,
+                request_log_example=request_log_example,
+                response_log_example=response_log_example,
             )
         )
 
@@ -153,6 +158,31 @@ def _extract_parameters_for_interface(blocks: list[dict], start_block_index: int
             parameters.extend(_parse_sectioned_parameter_table(block["rows"]))
 
     return parameters
+
+
+def _extract_log_examples_for_interface(blocks: list[dict], start_block_index: int) -> tuple[str, str]:
+    request_log = ""
+    response_log = ""
+
+    for block in blocks[start_block_index + 1 :]:
+        if block["type"] == "text" and INTERFACE_CODE_PATTERN.search(block["text"]):
+            break
+        if block["type"] != "table":
+            continue
+        for row in block["rows"]:
+            compact = "".join(row).replace(" ", "")
+            if "日志范例" not in compact:
+                continue
+            label = _cell(row, 1)
+            content = _cell(row, 2)
+            if not content:
+                continue
+            if "请求" in label and not request_log:
+                request_log = content
+            if ("应答" in label or "响应" in label) and not response_log:
+                response_log = content
+
+    return request_log, response_log
 
 
 def _parameter_kind_from_text(text: str) -> ParameterKind | None:

@@ -235,6 +235,43 @@ def test_upload_docx_replaces_existing_parameters_for_same_interface(client_with
     assert parameters[0].field_name == "NewField"
 
 
+def test_upload_docx_saves_log_examples(client_with_engine, tmp_path):
+    client, engine = client_with_engine
+    docx_path = tmp_path / "source.docx"
+    document = Document()
+    document.add_heading("EAP-EQP-010 初始化状态请求", level=2)
+    info_table = document.add_table(rows=1, cols=4)
+    for index, value in enumerate(["接口名称", "EAP_InitialDataRequest", "EAP_InitialDataRequest", "EAP_InitialDataRequest"]):
+        info_table.rows[0].cells[index].text = value
+    log_table = document.add_table(rows=0, cols=3)
+    for values in [
+        ["日志范例", "请求", 'REST:POST http://IP:Port/api/EAP_InitialDataRequest\n{"From":"EAP"}'],
+        ["日志范例", "应答", '{"Code":"0000","Success":true}'],
+    ]:
+        row = log_table.add_row()
+        for index, value in enumerate(values):
+            row.cells[index].text = value
+    document.save(docx_path)
+
+    response = client.post(
+        "/imports/spec",
+        files={
+            "spec_file": (
+                "原规格书.docx",
+                docx_path.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    with Session(engine) as session:
+        interface = session.exec(select(ApiInterface)).one()
+
+    assert "REST:POST http://IP:Port/api/EAP_InitialDataRequest" in interface.request_log_example
+    assert '"Code":"0000"' in interface.response_log_example
+
+
 def _add_parameter_table(document: Document, title: str, values: list[str]) -> None:
     document.add_paragraph(title)
     table = document.add_table(rows=1, cols=5)

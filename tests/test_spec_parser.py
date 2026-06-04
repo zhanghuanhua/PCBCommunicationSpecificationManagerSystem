@@ -100,3 +100,29 @@ def test_parse_interface_table_sections_extracts_content_parameters(tmp_path: Pa
     response_parameters = [item for item in result[0].parameters if item.kind == ParameterKind.RESPONSE]
     assert [item.field_name for item in request_parameters] == ["EqpId"]
     assert [item.field_name for item in response_parameters] == ["ControlMode"]
+
+
+def test_parse_interface_log_examples_from_log_table(tmp_path: Path):
+    docx_path = tmp_path / "spec_log_examples.docx"
+    document = Document()
+    document.add_heading("EAP-EQP-001 初始化状态请求", level=2)
+    info_table = document.add_table(rows=1, cols=4)
+    values = ["接口名称", "EAP_InitialDataRequest", "EAP_InitialDataRequest", "EAP_InitialDataRequest"]
+    for index, value in enumerate(values):
+        info_table.rows[0].cells[index].text = value
+    log_table = document.add_table(rows=0, cols=3)
+    for values in [
+        ["日志范例", "请求", 'REST:POST http://IP:Port/api/EAP_InitialDataRequest\n{"From":"EAP"}'],
+        ["日志范例", "应答", '{"Code":"0000","Success":true}'],
+    ]:
+        row = log_table.add_row()
+        for index, value in enumerate(values):
+            row.cells[index].text = value
+    document.save(docx_path)
+
+    result = parse_interface_basics_from_docx(docx_path)
+
+    assert len(result) == 1
+    assert "REST:POST http://IP:Port/api/EAP_InitialDataRequest" in result[0].request_log_example
+    assert '"From":"EAP"' in result[0].request_log_example
+    assert '"Code":"0000"' in result[0].response_log_example

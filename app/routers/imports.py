@@ -76,6 +76,8 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
             exists.provider = item.provider
             exists.version = "4.0"
             exists.status = InterfaceStatus.DRAFT
+            exists.request_log_example = item.request_log_example
+            exists.response_log_example = item.response_log_example
             exists.updated_at = datetime.now(UTC)
             session.add(exists)
             session.flush()
@@ -91,6 +93,8 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
             provider=item.provider,
             version="4.0",
             status=InterfaceStatus.DRAFT,
+            request_log_example=item.request_log_example,
+            response_log_example=item.response_log_example,
         )
         session.add(interface)
         session.flush()
