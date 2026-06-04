@@ -167,10 +167,12 @@ def delete_parameter(
     parameter = session.get(ApiParameter, parameter_id)
     if not interface or not parameter or parameter.interface_id != interface_id:
         raise HTTPException(status_code=404, detail="接口参数不存在")
+    kind = parameter.kind
     session.delete(parameter)
     interface.updated_at = datetime.now(UTC)
     session.add(interface)
     session.commit()
+    _sync_log_example(interface_id, kind, session)
     return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
 
 

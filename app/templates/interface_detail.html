@@ -48,7 +48,7 @@
               <option value="CUSTOM">自定义</option>
             </select>
           </label>
-          <label>
+          <label class="custom-type-field is-hidden">
             自定义类型
             <input name="custom_data_type" placeholder="例如 List&lt;Data&gt;">
           </label>
@@ -140,4 +140,18 @@
   </div>
   </section>
 </div>
+<script>
+  document.querySelectorAll('select[name="data_type_choice"]').forEach((select) => {
+    const row = select.closest('label')?.parentElement;
+    const customField = row?.querySelector('.custom-type-field');
+    const updateCustomField = () => {
+      if (!customField) {
+        return;
+      }
+      customField.classList.toggle('is-hidden', select.value !== 'CUSTOM');
+    };
+    select.addEventListener('change', updateCustomField);
+    updateCustomField();
+  });
+</script>
 {% endblock %}

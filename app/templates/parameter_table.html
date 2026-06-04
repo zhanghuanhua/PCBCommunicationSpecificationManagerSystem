@@ -26,7 +26,7 @@
           {% endfor %}
           <option value="CUSTOM" {% if not known_type %}selected{% endif %}>自定义</option>
         </select>
-        <input form="parameter-edit-{{ parameter.id }}" name="custom_data_type" value="{{ parameter.data_type if not known_type else '' }}" placeholder="自定义类型">
+        <input form="parameter-edit-{{ parameter.id }}" class="custom-type-field {% if known_type %}is-hidden{% endif %}" name="custom_data_type" value="{{ parameter.data_type if not known_type else '' }}" placeholder="自定义类型">
       </td>
       <td class="center-cell">
         <input form="parameter-edit-{{ parameter.id }}" type="checkbox" name="required" value="true" {% if parameter.required %}checked{% endif %}>

@@ -402,6 +402,10 @@ th {
   grid-column: 1 / -1;
 }
 
+.is-hidden {
+  display: none;
+}
+
 .log-example-panel {
   max-width: none;
 }
