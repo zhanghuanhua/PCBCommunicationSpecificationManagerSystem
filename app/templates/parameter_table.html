@@ -6,15 +6,14 @@
       <th>类型</th>
       <th>必填</th>
       <th>数组</th>
-      <th>示例值</th>
       <th>说明</th>
-      <th>操作</th>
+      <th class="actions-column">操作</th>
     </tr>
   </thead>
   <tbody>
     {% for parameter in parameters %}
     <tr id="parameter-{{ parameter.id }}">
-      <td>
+      <td class="actions-column">
         <form id="parameter-edit-{{ parameter.id }}" method="post" action="/interfaces/{{ interface.id }}/parameters/{{ parameter.id }}"></form>
         <input form="parameter-edit-{{ parameter.id }}" name="field_name" value="{{ parameter.field_name }}" required>
         <input form="parameter-edit-{{ parameter.id }}" type="hidden" name="kind" value="{{ parameter.kind }}">
@@ -27,9 +26,6 @@
       </td>
       <td class="center-cell">
         <input form="parameter-edit-{{ parameter.id }}" type="checkbox" name="is_array" value="true" {% if parameter.is_array %}checked{% endif %}>
-      </td>
-      <td>
-        <input form="parameter-edit-{{ parameter.id }}" name="example_value" value="{{ parameter.example_value }}">
       </td>
       <td>
         <textarea form="parameter-edit-{{ parameter.id }}" name="description" required>{{ parameter.description }}</textarea>

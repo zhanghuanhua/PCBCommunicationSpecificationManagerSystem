@@ -16,7 +16,13 @@
 <section class="interface-detail-layout">
   <div class="detail-main">
     <details class="form-panel parameter-form parameter-add-panel">
-      <summary>新增参数</summary>
+      <summary class="parameter-add-cta">
+        <span>
+          <strong>新增参数</strong>
+          <small>点击添加请求或响应字段</small>
+        </span>
+        <span class="button parameter-add-button">添加参数</span>
+      </summary>
       <form method="post" action="/interfaces/{{ interface.id }}/parameters">
         <div class="section-heading">
           <div>
@@ -39,10 +45,6 @@
           <label>
             类型
             <input name="data_type" placeholder="例如 string、int、bool" required>
-          </label>
-          <label>
-            示例值
-            <input name="example_value" placeholder="例如 L001">
           </label>
           <label class="wide-field">
             字段说明

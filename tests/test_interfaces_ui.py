@@ -139,11 +139,15 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "请求日志范例" in response.text
     assert "响应日志范例" in response.text
     assert "新增参数" in response.text
+    assert "添加参数" in response.text
     assert "interface-detail-layout" in response.text
     assert "parameter-add-panel" in response.text
+    assert "parameter-add-cta" in response.text
     assert "parameter-table-scroll" in response.text
     assert "parameter-grid" not in response.text
     assert "detail-side-panel" not in response.text
+    assert "示例值" not in response.text
+    assert "example_value" not in response.text
 
 
 def test_add_parameter_to_interface_detail_page(tmp_path):
@@ -182,7 +186,6 @@ def test_update_parameter_on_interface_detail_page(tmp_path):
                 "data_type": "int",
                 "required": "",
                 "is_array": "true",
-                "example_value": "200",
                 "description": "处理结果码",
             },
             follow_redirects=True,
@@ -193,7 +196,6 @@ def test_update_parameter_on_interface_detail_page(tmp_path):
     assert response.status_code == 200
     assert "ResultCode" in response.text
     assert "处理结果码" in response.text
-    assert "200" in response.text
     assert 'value="LotId"' not in response.text
 
 

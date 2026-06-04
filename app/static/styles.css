@@ -358,31 +358,53 @@ th {
 
 .parameter-add-panel {
   max-width: none;
+  padding: 0;
+  overflow: hidden;
 }
 
-.parameter-add-panel summary {
-  width: max-content;
-  padding: 8px 14px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
+.parameter-add-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: var(--text);
   cursor: pointer;
   list-style: none;
 }
 
-.parameter-add-panel summary::-webkit-details-marker {
+.parameter-add-cta::-webkit-details-marker {
   display: none;
+}
+
+.parameter-add-cta strong {
+  display: block;
+  color: #1d4ed8;
+  font-size: 18px;
+}
+
+.parameter-add-cta small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.parameter-add-button {
+  flex: 0 0 auto;
 }
 
 .parameter-add-panel form {
   display: grid;
   gap: 14px;
-  margin-top: 16px;
+  padding: 16px;
+  border-top: 1px solid var(--line);
 }
 
 .parameter-add-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -402,7 +424,11 @@ th {
 }
 
 .parameter-edit-table {
-  min-width: 980px;
+  min-width: 900px;
+}
+
+.parameter-edit-table .actions-column {
+  width: 150px;
 }
 
 .parameter-table-scroll {
@@ -435,6 +461,7 @@ th {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .small-button {
