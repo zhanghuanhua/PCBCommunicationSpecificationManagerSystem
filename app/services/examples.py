@@ -48,9 +48,15 @@ def _coerce_example_value(parameter: ApiParameter) -> Any:
 
 def _coerce_scalar(value: str, data_type: str) -> Any:
     if data_type in {"int", "integer"}:
-        return int(value) if value else 0
+        try:
+            return int(value) if value else 0
+        except ValueError:
+            return 0
     if data_type in {"float", "decimal", "double"}:
-        return float(value) if value else 0.0
+        try:
+            return float(value) if value else 0.0
+        except ValueError:
+            return 0.0
     if data_type in {"bool", "boolean"}:
         if value.lower() == "false":
             return False

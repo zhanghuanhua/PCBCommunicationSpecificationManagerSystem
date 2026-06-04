@@ -16,10 +16,17 @@
       <td class="actions-column">
         <form id="parameter-edit-{{ parameter.id }}" method="post" action="/interfaces/{{ interface.id }}/parameters/{{ parameter.id }}"></form>
         <input form="parameter-edit-{{ parameter.id }}" name="field_name" value="{{ parameter.field_name }}" required>
-        <input form="parameter-edit-{{ parameter.id }}" type="hidden" name="kind" value="{{ parameter.kind }}">
+        <input form="parameter-edit-{{ parameter.id }}" type="hidden" name="kind" value="{{ parameter.kind.value }}">
       </td>
       <td>
-        <input form="parameter-edit-{{ parameter.id }}" name="data_type" value="{{ parameter.data_type }}" required>
+        {% set known_type = parameter.data_type in parameter_type_options %}
+        <select form="parameter-edit-{{ parameter.id }}" name="data_type_choice" required>
+          {% for type_option in parameter_type_options %}
+            <option value="{{ type_option }}" {% if parameter.data_type == type_option %}selected{% endif %}>{{ type_option }}</option>
+          {% endfor %}
+          <option value="CUSTOM" {% if not known_type %}selected{% endif %}>自定义</option>
+        </select>
+        <input form="parameter-edit-{{ parameter.id }}" name="custom_data_type" value="{{ parameter.data_type if not known_type else '' }}" placeholder="自定义类型">
       </td>
       <td class="center-cell">
         <input form="parameter-edit-{{ parameter.id }}" type="checkbox" name="required" value="true" {% if parameter.required %}checked{% endif %}>

@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -7,10 +8,12 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, InterfaceStatus, ParameterKind
+from app.services.examples import build_request_example, build_response_example
 
 
 router = APIRouter(prefix="/interfaces")
 templates = Jinja2Templates(directory="app/templates")
+PARAMETER_TYPE_OPTIONS = ["string", "list", "bool", "DateTime", "Int", "object"]
 
 
 @router.post("")
@@ -71,6 +74,7 @@ def interface_detail(
             "request_parameters": [item for item in parameters if item.kind == ParameterKind.REQUEST],
             "response_parameters": [item for item in parameters if item.kind == ParameterKind.RESPONSE],
             "kinds": ParameterKind,
+            "parameter_type_options": PARAMETER_TYPE_OPTIONS,
         },
     )
 
@@ -80,7 +84,9 @@ def add_parameter(
     interface_id: int,
     kind: ParameterKind = Form(...),
     field_name: str = Form(...),
-    data_type: str = Form(...),
+    data_type: str = Form(""),
+    data_type_choice: str = Form(""),
+    custom_data_type: str = Form(""),
     required: bool = Form(False),
     is_array: bool = Form(False),
     example_value: str = Form(""),
@@ -101,7 +107,7 @@ def add_parameter(
         kind=kind,
         sort_order=len(count) + 1,
         field_name=field_name,
-        data_type=data_type,
+        data_type=_resolve_data_type(data_type, data_type_choice, custom_data_type),
         required=required,
         is_array=is_array,
         example_value=example_value,
@@ -112,6 +118,7 @@ def add_parameter(
     session.add(interface)
     session.commit()
     session.refresh(parameter)
+    _sync_log_example(interface_id, kind, session)
     return RedirectResponse(f"/interfaces/{interface_id}#parameter-{parameter.id}", status_code=303)
 
 
@@ -121,7 +128,9 @@ def update_parameter(
     parameter_id: int,
     kind: ParameterKind = Form(...),
     field_name: str = Form(...),
-    data_type: str = Form(...),
+    data_type: str = Form(""),
+    data_type_choice: str = Form(""),
+    custom_data_type: str = Form(""),
     required: bool = Form(False),
     is_array: bool = Form(False),
     example_value: str = Form(""),
@@ -134,15 +143,17 @@ def update_parameter(
         raise HTTPException(status_code=404, detail="接口参数不存在")
     parameter.kind = kind
     parameter.field_name = field_name
-    parameter.data_type = data_type
+    parameter.data_type = _resolve_data_type(data_type, data_type_choice, custom_data_type)
     parameter.required = required
     parameter.is_array = is_array
-    parameter.example_value = example_value
+    if example_value:
+        parameter.example_value = example_value
     parameter.description = description
     session.add(parameter)
     interface.updated_at = datetime.now(UTC)
     session.add(interface)
     session.commit()
+    _sync_log_example(interface_id, kind, session)
     return RedirectResponse(f"/interfaces/{interface_id}#parameter-{parameter_id}", status_code=303)
 
 
@@ -161,6 +172,38 @@ def delete_parameter(
     session.add(interface)
     session.commit()
     return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
+
+
+def _resolve_data_type(data_type: str, data_type_choice: str, custom_data_type: str) -> str:
+    if data_type_choice == "CUSTOM":
+        return custom_data_type.strip() or data_type.strip()
+    return (data_type_choice or data_type).strip()
+
+
+def _sync_log_example(interface_id: int, kind: ParameterKind, session: Session) -> None:
+    interface = session.get(ApiInterface, interface_id)
+    if not interface:
+        return
+    parameters = session.exec(
+        select(ApiParameter)
+        .where(ApiParameter.interface_id == interface_id)
+        .order_by(ApiParameter.sort_order, ApiParameter.id)
+    ).all()
+    if kind == ParameterKind.REQUEST:
+        interface.request_log_example = _format_request_log(interface, parameters)
+    else:
+        interface.response_log_example = _format_json_log(build_response_example(interface, parameters))
+    interface.updated_at = datetime.now(UTC)
+    session.add(interface)
+    session.commit()
+
+
+def _format_request_log(interface: ApiInterface, parameters: list[ApiParameter]) -> str:
+    return f"REST:POST http://IP:Port/api/{interface.api_name}\n{_format_json_log(build_request_example(interface, parameters))}"
+
+
+def _format_json_log(data: dict) -> str:
+    return json.dumps(data, ensure_ascii=False, indent=4)
 
 
 @router.post("/{interface_id}/log-examples")

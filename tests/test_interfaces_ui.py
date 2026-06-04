@@ -146,10 +146,13 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "parameter-add-panel" in response.text
     assert "parameter-add-cta" in response.text
     assert "parameter-table-scroll" in response.text
+    assert '<option value="string">string</option>' in response.text
+    assert '<option value="CUSTOM">自定义</option>' in response.text
+    assert 'name="custom_data_type"' in response.text
+    assert 'name="example_value"' in response.text
     assert "parameter-grid" not in response.text
     assert "detail-side-panel" not in response.text
-    assert "示例值" not in response.text
-    assert "example_value" not in response.text
+    assert "示例值</th>" not in response.text
 
 
 def test_add_parameter_to_interface_detail_page(tmp_path):
@@ -175,6 +178,7 @@ def test_add_parameter_to_interface_detail_page(tmp_path):
     assert "LotId" in response.text
     assert "批次号" in response.text
     assert "请求参数" in response.text
+    assert "L001" in response.text
 
 
 def test_update_parameter_on_interface_detail_page(tmp_path):
@@ -199,6 +203,75 @@ def test_update_parameter_on_interface_detail_page(tmp_path):
     assert "ResultCode" in response.text
     assert "处理结果码" in response.text
     assert 'value="LotId"' not in response.text
+
+
+def test_update_parameter_keeps_valid_kind_value(tmp_path):
+    client, interface_id, parameter_id = _client_with_parameter(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}/parameters/{parameter_id}",
+            data={
+                "kind": "REQUEST",
+                "field_name": "LotId",
+                "data_type_choice": "string",
+                "required": "true",
+                "description": "批次号",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "ParameterKind.REQUEST" not in response.text
+
+
+def test_add_request_parameter_updates_request_log_example(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}/parameters",
+            data={
+                "kind": "REQUEST",
+                "field_name": "IP",
+                "data_type_choice": "string",
+                "required": "true",
+                "example_value": "127.0.0.1",
+                "description": "IP地址",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "127.0.0.1" in response.text
+    assert "IP" in response.text
+
+
+def test_add_custom_list_parameter_updates_log_example(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}/parameters",
+            data={
+                "kind": "RESPONSE",
+                "field_name": "DataList",
+                "data_type_choice": "CUSTOM",
+                "custom_data_type": "List<Data>",
+                "required": "true",
+                "is_array": "true",
+                "example_value": "D001",
+                "description": "资料列表",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "List&lt;Data&gt;" in response.text
+    assert "DataList" in response.text
 
 
 def test_delete_parameter_from_interface_detail_page(tmp_path):
