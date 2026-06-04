@@ -1,5 +1,5 @@
 {% if parameters %}
-<table>
+<table class="parameter-edit-table">
   <thead>
     <tr>
       <th>字段名</th>
@@ -8,17 +8,40 @@
       <th>数组</th>
       <th>示例值</th>
       <th>说明</th>
+      <th>操作</th>
     </tr>
   </thead>
   <tbody>
     {% for parameter in parameters %}
-    <tr>
-      <td>{{ parameter.field_name }}</td>
-      <td>{{ parameter.data_type }}</td>
-      <td>{{ "是" if parameter.required else "否" }}</td>
-      <td>{{ "是" if parameter.is_array else "否" }}</td>
-      <td>{{ parameter.example_value }}</td>
-      <td>{{ parameter.description }}</td>
+    <tr id="parameter-{{ parameter.id }}">
+      <td>
+        <form id="parameter-edit-{{ parameter.id }}" method="post" action="/interfaces/{{ interface.id }}/parameters/{{ parameter.id }}"></form>
+        <input form="parameter-edit-{{ parameter.id }}" name="field_name" value="{{ parameter.field_name }}" required>
+        <input form="parameter-edit-{{ parameter.id }}" type="hidden" name="kind" value="{{ parameter.kind }}">
+      </td>
+      <td>
+        <input form="parameter-edit-{{ parameter.id }}" name="data_type" value="{{ parameter.data_type }}" required>
+      </td>
+      <td class="center-cell">
+        <input form="parameter-edit-{{ parameter.id }}" type="checkbox" name="required" value="true" {% if parameter.required %}checked{% endif %}>
+      </td>
+      <td class="center-cell">
+        <input form="parameter-edit-{{ parameter.id }}" type="checkbox" name="is_array" value="true" {% if parameter.is_array %}checked{% endif %}>
+      </td>
+      <td>
+        <input form="parameter-edit-{{ parameter.id }}" name="example_value" value="{{ parameter.example_value }}">
+      </td>
+      <td>
+        <textarea form="parameter-edit-{{ parameter.id }}" name="description" required>{{ parameter.description }}</textarea>
+      </td>
+      <td>
+        <div class="row-actions">
+          <button form="parameter-edit-{{ parameter.id }}" type="submit" class="small-button">保存</button>
+          <form method="post" action="/interfaces/{{ interface.id }}/parameters/{{ parameter.id }}/delete" onsubmit="return confirm('确认删除该参数吗？');">
+            <button type="submit" class="small-button danger">删除</button>
+          </form>
+        </div>
+      </td>
     </tr>
     {% endfor %}
   </tbody>

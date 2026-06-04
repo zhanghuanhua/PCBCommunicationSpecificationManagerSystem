@@ -111,6 +111,55 @@ def add_parameter(
     interface.updated_at = datetime.now(UTC)
     session.add(interface)
     session.commit()
+    session.refresh(parameter)
+    return RedirectResponse(f"/interfaces/{interface_id}#parameter-{parameter.id}", status_code=303)
+
+
+@router.post("/{interface_id}/parameters/{parameter_id}")
+def update_parameter(
+    interface_id: int,
+    parameter_id: int,
+    kind: ParameterKind = Form(...),
+    field_name: str = Form(...),
+    data_type: str = Form(...),
+    required: bool = Form(False),
+    is_array: bool = Form(False),
+    example_value: str = Form(""),
+    description: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    interface = session.get(ApiInterface, interface_id)
+    parameter = session.get(ApiParameter, parameter_id)
+    if not interface or not parameter or parameter.interface_id != interface_id:
+        raise HTTPException(status_code=404, detail="接口参数不存在")
+    parameter.kind = kind
+    parameter.field_name = field_name
+    parameter.data_type = data_type
+    parameter.required = required
+    parameter.is_array = is_array
+    parameter.example_value = example_value
+    parameter.description = description
+    session.add(parameter)
+    interface.updated_at = datetime.now(UTC)
+    session.add(interface)
+    session.commit()
+    return RedirectResponse(f"/interfaces/{interface_id}#parameter-{parameter_id}", status_code=303)
+
+
+@router.post("/{interface_id}/parameters/{parameter_id}/delete")
+def delete_parameter(
+    interface_id: int,
+    parameter_id: int,
+    session: Session = Depends(get_session),
+):
+    interface = session.get(ApiInterface, interface_id)
+    parameter = session.get(ApiParameter, parameter_id)
+    if not interface or not parameter or parameter.interface_id != interface_id:
+        raise HTTPException(status_code=404, detail="接口参数不存在")
+    session.delete(parameter)
+    interface.updated_at = datetime.now(UTC)
+    session.add(interface)
+    session.commit()
     return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
 
 
