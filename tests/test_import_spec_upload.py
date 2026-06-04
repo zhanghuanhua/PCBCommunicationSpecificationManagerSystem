@@ -7,7 +7,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.database import get_session
 from app.main import app
-from app.models import ApiInterface, SpecTemplate
+from app.models import ApiInterface, ApiParameter, ParameterKind, SpecTemplate
 from app.routers import imports
 
 
@@ -164,3 +164,83 @@ def test_upload_docx_updates_existing_interface_codes(client_with_engine, tmp_pa
     assert len(interfaces) == 1
     assert interfaces[0].name == "设备状态变更上报"
     assert interfaces[0].api_name == "EQP_StatusChanged"
+
+
+def test_upload_docx_saves_parsed_request_and_response_parameters(client_with_engine, tmp_path):
+    client, engine = client_with_engine
+    docx_path = tmp_path / "source.docx"
+    document = Document()
+    document.add_heading("EQP-EAP-010 设备状态上报", level=2)
+    document.add_paragraph("接口名称 EQP_StatusReport")
+    _add_parameter_table(document, "请求参数", ["LotId", "string", "是", "L001", "批次号"])
+    _add_parameter_table(document, "响应参数", ["Result", "bool", "是", "true", "处理结果"])
+    document.save(docx_path)
+
+    response = client.post(
+        "/imports/spec",
+        files={
+            "spec_file": (
+                "原规格书.docx",
+                docx_path.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    with Session(engine) as session:
+        interface = session.exec(select(ApiInterface)).one()
+        parameters = session.exec(select(ApiParameter).order_by(ApiParameter.sort_order)).all()
+
+    assert interface.code == "EQP-EAP-010"
+    assert len(parameters) == 2
+    assert parameters[0].kind == ParameterKind.REQUEST
+    assert parameters[0].field_name == "LotId"
+    assert parameters[1].kind == ParameterKind.RESPONSE
+    assert parameters[1].field_name == "Result"
+
+
+def test_upload_docx_replaces_existing_parameters_for_same_interface(client_with_engine, tmp_path):
+    client, engine = client_with_engine
+    first_docx = tmp_path / "first.docx"
+    first_document = Document()
+    first_document.add_heading("EQP-EAP-010 设备状态上报", level=2)
+    first_document.add_paragraph("接口名称 EQP_StatusReport")
+    _add_parameter_table(first_document, "请求参数", ["OldField", "string", "是", "old", "旧字段"])
+    first_document.save(first_docx)
+    second_docx = tmp_path / "second.docx"
+    second_document = Document()
+    second_document.add_heading("EQP-EAP-010 设备状态上报", level=2)
+    second_document.add_paragraph("接口名称 EQP_StatusReport")
+    _add_parameter_table(second_document, "请求参数", ["NewField", "string", "是", "new", "新字段"])
+    second_document.save(second_docx)
+
+    for path in [first_docx, second_docx]:
+        client.post(
+            "/imports/spec",
+            files={
+                "spec_file": (
+                    "原规格书.docx",
+                    path.read_bytes(),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+        )
+
+    with Session(engine) as session:
+        parameters = session.exec(select(ApiParameter)).all()
+
+    assert len(parameters) == 1
+    assert parameters[0].field_name == "NewField"
+
+
+def _add_parameter_table(document: Document, title: str, values: list[str]) -> None:
+    document.add_paragraph(title)
+    table = document.add_table(rows=1, cols=5)
+    headers = ["字段名", "类型", "必填", "示例值", "说明"]
+    for index, header in enumerate(headers):
+        table.rows[0].cells[index].text = header
+    row = table.add_row()
+    for index, value in enumerate(values):
+        row.cells[index].text = value

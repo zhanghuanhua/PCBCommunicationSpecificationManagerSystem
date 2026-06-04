@@ -5,12 +5,12 @@ from zipfile import BadZipFile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.templating import Jinja2Templates
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 from starlette.status import HTTP_400_BAD_REQUEST
 
 from app.database import get_session
-from app.models import ApiInterface, InterfaceStatus, SpecTemplate
-from app.services.spec_parser import ParsedInterface, parse_interface_basics_from_docx
+from app.models import ApiInterface, ApiParameter, InterfaceStatus, SpecTemplate
+from app.services.spec_parser import ParsedInterface, ParsedParameter, parse_interface_basics_from_docx
 
 router = APIRouter(prefix="/imports")
 templates = Jinja2Templates(directory="app/templates")
@@ -78,6 +78,8 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
             exists.status = InterfaceStatus.DRAFT
             exists.updated_at = datetime.now(UTC)
             session.add(exists)
+            session.flush()
+            _replace_parameters(exists.id or 0, item.parameters, session)
             updated.append(item)
             continue
         interface = ApiInterface(
@@ -91,6 +93,8 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
             status=InterfaceStatus.DRAFT,
         )
         session.add(interface)
+        session.flush()
+        _replace_parameters(interface.id or 0, item.parameters, session)
         created.append(item)
 
     session.commit()
@@ -98,8 +102,28 @@ def _save_parsed_interfaces(docx_path: Path, session: Session) -> dict:
         "parsed_total": len(parsed),
         "created_total": len(created),
         "updated_total": len(updated),
+        "parameter_total": sum(len(item.parameters) for item in parsed),
         "eqp_to_eap_total": sum(1 for item in parsed if item.code.startswith("EQP-EAP-")),
         "eap_to_eqp_total": sum(1 for item in parsed if item.code.startswith("EAP-EQP-")),
         "created": created,
         "updated": updated,
     }
+
+
+def _replace_parameters(
+    interface_id: int, parsed_parameters: list[ParsedParameter], session: Session
+) -> None:
+    session.exec(delete(ApiParameter).where(ApiParameter.interface_id == interface_id))
+    for index, item in enumerate(parsed_parameters, start=1):
+        session.add(
+            ApiParameter(
+                interface_id=interface_id,
+                kind=item.kind,
+                sort_order=index,
+                field_name=item.field_name,
+                data_type=item.data_type,
+                required=item.required,
+                example_value=item.example_value,
+                description=item.description,
+            )
+        )
