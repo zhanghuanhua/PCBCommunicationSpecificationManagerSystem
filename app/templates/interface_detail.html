@@ -15,6 +15,50 @@
 
 <section class="interface-detail-layout">
   <div class="detail-main">
+    <details class="form-panel parameter-form parameter-add-panel">
+      <summary>新增参数</summary>
+      <form method="post" action="/interfaces/{{ interface.id }}/parameters">
+        <div class="section-heading">
+          <div>
+            <h2>新增参数</h2>
+            <p>添加请求或响应字段。</p>
+          </div>
+        </div>
+        <div class="parameter-add-grid">
+          <label>
+            参数位置
+            <select name="kind">
+              <option value="REQUEST">请求参数</option>
+              <option value="RESPONSE">响应参数</option>
+            </select>
+          </label>
+          <label>
+            字段名
+            <input name="field_name" placeholder="例如 LotId" required>
+          </label>
+          <label>
+            类型
+            <input name="data_type" placeholder="例如 string、int、bool" required>
+          </label>
+          <label>
+            示例值
+            <input name="example_value" placeholder="例如 L001">
+          </label>
+          <label class="wide-field">
+            字段说明
+            <textarea name="description" required></textarea>
+          </label>
+        </div>
+        <div class="checkbox-row">
+          <label><input type="checkbox" name="required" value="true" checked> 必填</label>
+          <label><input type="checkbox" name="is_array" value="true"> 数组</label>
+        </div>
+        <div class="actions">
+          <button type="submit">保存参数</button>
+        </div>
+      </form>
+    </details>
+
     <div class="table-wrap">
       <div class="section-heading">
         <div>
@@ -41,9 +85,11 @@
           <p>接口请求 Content 中的字段。</p>
         </div>
       </div>
-      {% with parameters=request_parameters %}
-        {% include "parameter_table.html" %}
-      {% endwith %}
+      <div class="parameter-table-scroll">
+        {% with parameters=request_parameters %}
+          {% include "parameter_table.html" %}
+        {% endwith %}
+      </div>
     </div>
 
     <div class="table-wrap">
@@ -53,9 +99,11 @@
           <p>接口响应 Content 中的字段。</p>
         </div>
       </div>
-      {% with parameters=response_parameters %}
-        {% include "parameter_table.html" %}
-      {% endwith %}
+      <div class="parameter-table-scroll">
+        {% with parameters=response_parameters %}
+          {% include "parameter_table.html" %}
+        {% endwith %}
+      </div>
     </div>
 
     <form class="form-panel log-example-panel" method="post" action="/interfaces/{{ interface.id }}/log-examples">
@@ -78,44 +126,5 @@
       </div>
     </form>
   </div>
-
-  <form class="form-panel parameter-form detail-side-panel" method="post" action="/interfaces/{{ interface.id }}/parameters">
-    <div class="section-heading">
-      <div>
-        <h2>新增参数</h2>
-        <p>添加请求或响应字段。</p>
-      </div>
-    </div>
-    <label>
-      参数位置
-      <select name="kind">
-        <option value="REQUEST">请求参数</option>
-        <option value="RESPONSE">响应参数</option>
-      </select>
-    </label>
-    <label>
-      字段名
-      <input name="field_name" placeholder="例如 LotId" required>
-    </label>
-    <label>
-      类型
-      <input name="data_type" placeholder="例如 string、int、bool" required>
-    </label>
-    <label>
-      示例值
-      <input name="example_value" placeholder="例如 L001">
-    </label>
-    <label>
-      字段说明
-      <textarea name="description" required></textarea>
-    </label>
-    <div class="checkbox-row">
-      <label><input type="checkbox" name="required" value="true" checked> 必填</label>
-      <label><input type="checkbox" name="is_array" value="true"> 数组</label>
-    </div>
-    <div class="actions">
-      <button type="submit">保存参数</button>
-    </div>
-  </form>
 </section>
 {% endblock %}

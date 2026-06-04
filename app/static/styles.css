@@ -340,7 +340,7 @@ th {
 }
 
 .interface-detail-layout {
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .detail-main {
@@ -356,9 +356,38 @@ th {
   max-width: none;
 }
 
-.detail-side-panel {
-  position: sticky;
-  top: 78px;
+.parameter-add-panel {
+  max-width: none;
+}
+
+.parameter-add-panel summary {
+  width: max-content;
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.parameter-add-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.parameter-add-panel form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.parameter-add-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.wide-field {
+  grid-column: 1 / -1;
 }
 
 .log-example-panel {
@@ -374,6 +403,12 @@ th {
 
 .parameter-edit-table {
   min-width: 980px;
+}
+
+.parameter-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
 }
 
 .parameter-edit-table input,
@@ -492,12 +527,9 @@ textarea {
   .quick-actions-grid,
   .detail-grid,
   .parameter-grid,
-  .interface-detail-layout {
+  .interface-detail-layout,
+  .parameter-add-grid {
     grid-template-columns: 1fr;
-  }
-
-  .detail-side-panel {
-    position: static;
   }
 
   .interface-table-scroll {

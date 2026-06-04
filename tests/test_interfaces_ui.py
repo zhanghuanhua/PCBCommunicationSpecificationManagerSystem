@@ -140,7 +140,10 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "响应日志范例" in response.text
     assert "新增参数" in response.text
     assert "interface-detail-layout" in response.text
+    assert "parameter-add-panel" in response.text
+    assert "parameter-table-scroll" in response.text
     assert "parameter-grid" not in response.text
+    assert "detail-side-panel" not in response.text
 
 
 def test_add_parameter_to_interface_detail_page(tmp_path):
