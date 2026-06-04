@@ -178,7 +178,10 @@ def delete_parameter(
 
 def _resolve_data_type(data_type: str, data_type_choice: str, custom_data_type: str) -> str:
     if data_type_choice == "CUSTOM":
-        return custom_data_type.strip() or data_type.strip()
+        custom_type = custom_data_type.strip()
+        if not custom_type:
+            raise HTTPException(status_code=400, detail="选择自定义时必须填写自定义类型")
+        return custom_type
     return (data_type_choice or data_type).strip()
 
 

@@ -190,7 +190,7 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert '<option value="string">string</option>' in response.text
     assert '<option value="CUSTOM">自定义</option>' in response.text
     assert 'name="custom_data_type"' in response.text
-    assert "custom-type-field is-hidden" in response.text
+    assert "选择自定义时必填" in response.text
     assert 'name="example_value"' in response.text
     assert "parameter-grid" not in response.text
     assert "detail-side-panel" not in response.text
@@ -314,6 +314,27 @@ def test_add_custom_list_parameter_updates_log_example(tmp_path):
     assert response.status_code == 200
     assert "List&lt;Data&gt;" in response.text
     assert "DataList" in response.text
+
+
+def test_custom_parameter_type_requires_custom_value(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}/parameters",
+            data={
+                "kind": "REQUEST",
+                "field_name": "DataList",
+                "data_type_choice": "CUSTOM",
+                "custom_data_type": "",
+                "required": "true",
+                "description": "资料列表",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "选择自定义时必须填写自定义类型" in response.text
 
 
 def test_delete_parameter_from_interface_detail_page(tmp_path):
