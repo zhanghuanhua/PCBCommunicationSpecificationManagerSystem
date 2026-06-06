@@ -10,17 +10,27 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/")
-def home(request: Request, session: Session = Depends(get_session)):
-    interfaces = session.exec(select(ApiInterface).order_by(ApiInterface.code)).all()
+def home(
+    request: Request,
+    direction: str = "all",
+    status: str = "all",
+    session: Session = Depends(get_session),
+):
+    all_interfaces = session.exec(select(ApiInterface).order_by(ApiInterface.code)).all()
+    interfaces = [
+        item
+        for item in all_interfaces
+        if _matches_direction(item, direction) and _matches_status(item, status)
+    ]
     recent_exports = session.exec(
         select(ExportRecord).order_by(ExportRecord.created_at.desc()).limit(2)
     ).all()
     template = session.exec(select(SpecTemplate).order_by(SpecTemplate.created_at.desc())).first()
     stats = {
-        "total": len(interfaces),
-        "eqp_to_eap": sum(1 for item in interfaces if item.direction == InterfaceDirection.EQP_TO_EAP),
-        "eap_to_eqp": sum(1 for item in interfaces if item.direction == InterfaceDirection.EAP_TO_EQP),
-        "draft": sum(1 for item in interfaces if item.status == InterfaceStatus.DRAFT),
+        "total": len(all_interfaces),
+        "eqp_to_eap": sum(1 for item in all_interfaces if item.direction == InterfaceDirection.EQP_TO_EAP),
+        "eap_to_eqp": sum(1 for item in all_interfaces if item.direction == InterfaceDirection.EAP_TO_EQP),
+        "draft": sum(1 for item in all_interfaces if item.status == InterfaceStatus.DRAFT),
     }
     return templates.TemplateResponse(
         request,
@@ -31,8 +41,22 @@ def home(request: Request, session: Session = Depends(get_session)):
             "recent_exports": recent_exports,
             "stats": stats,
             "template": template,
+            "active_direction": direction,
+            "active_status": status,
         },
     )
+
+
+def _matches_direction(interface: ApiInterface, direction: str) -> bool:
+    if direction == "all":
+        return True
+    return interface.direction.value == direction
+
+
+def _matches_status(interface: ApiInterface, status: str) -> bool:
+    if status == "all":
+        return True
+    return interface.status.value == status
 
 
 @router.get("/interfaces/new")

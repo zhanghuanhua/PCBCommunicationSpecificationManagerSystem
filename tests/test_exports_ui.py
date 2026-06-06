@@ -38,6 +38,7 @@ def test_export_center_creates_markdown_file():
     assert "导出结果" in response.text
     assert output.exists()
     assert "珠海超毅 EAP-EQP API 接口通讯规格书" in output.read_text(encoding="utf-8")
+    assert str(output.resolve()) in response.text
 
 
 def test_export_center_uses_imported_template_for_word(tmp_path):

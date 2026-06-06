@@ -72,10 +72,10 @@
       <p>按方向、状态和版本查看接口。</p>
     </div>
     <div class="filters">
-      <span class="filter active">全部</span>
-      <span class="filter">EQP -> EAP</span>
-      <span class="filter">EAP -> EQP</span>
-      <span class="filter">草稿</span>
+      <a class="filter {{ 'active' if active_direction == 'all' and active_status == 'all' else '' }}" href="/?direction=all">全部</a>
+      <a class="filter {{ 'active' if active_direction == 'EQP_TO_EAP' else '' }}" href="/?direction=EQP_TO_EAP">EQP -> EAP</a>
+      <a class="filter {{ 'active' if active_direction == 'EAP_TO_EQP' else '' }}" href="/?direction=EAP_TO_EQP">EAP -> EQP</a>
+      <a class="filter {{ 'active' if active_status == 'DRAFT' else '' }}" href="/?status=DRAFT">草稿</a>
     </div>
   </div>
   <div class="interface-table-scroll">

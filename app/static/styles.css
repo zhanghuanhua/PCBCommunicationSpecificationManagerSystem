@@ -147,6 +147,7 @@ body {
 }
 
 .filter {
+  text-decoration: none;
   padding: 6px 10px;
   background: #f8fafc;
   border: 1px solid var(--line);
@@ -304,6 +305,21 @@ th {
 .success-block span {
   color: #15803d;
   font-size: 13px;
+}
+
+.path-list {
+  display: grid;
+  gap: 10px;
+  padding-left: 18px;
+}
+
+.path-list code {
+  display: inline-block;
+  max-width: 100%;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  overflow-wrap: anywhere;
 }
 
 .parse-result-panel {

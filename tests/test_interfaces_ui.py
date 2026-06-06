@@ -141,6 +141,62 @@ def test_home_page_uses_vertical_workspace_layout():
     assert "workspace-grid" not in response.text
 
 
+def test_home_page_filter_buttons_are_links():
+    client = TestClient(app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/?direction=all"' in response.text
+    assert 'href="/?direction=EQP_TO_EAP"' in response.text
+    assert 'href="/?direction=EAP_TO_EQP"' in response.text
+    assert 'href="/?status=DRAFT"' in response.text
+
+
+def test_home_page_filters_interfaces_by_direction(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(
+            ApiInterface(
+                code="EQP-EAP-001",
+                name="设备上报",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_Report",
+                caller="EQP",
+                provider="EAP",
+                status=InterfaceStatus.DRAFT,
+            )
+        )
+        session.add(
+            ApiInterface(
+                code="EAP-EQP-001",
+                name="EAP下发",
+                direction=InterfaceDirection.EAP_TO_EQP,
+                api_name="EAP_Command",
+                caller="EAP",
+                provider="EQP",
+                status=InterfaceStatus.DRAFT,
+            )
+        )
+        session.commit()
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.get("/?direction=EQP_TO_EAP")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "设备上报" in response.text
+    assert "EAP下发" not in response.text
+
+
 def test_new_interface_page_shows_create_form():
     client = TestClient(app)
 

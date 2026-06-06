@@ -101,5 +101,9 @@ def run_export(
     return templates.TemplateResponse(
         request,
         "export_result.html",
-        {"title": "导出结果", "output_files": output_files},
+        {
+            "title": "导出结果",
+            "output_files": output_files,
+            "absolute_output_files": [str(Path(file).resolve()) for file in output_files],
+        },
     )
