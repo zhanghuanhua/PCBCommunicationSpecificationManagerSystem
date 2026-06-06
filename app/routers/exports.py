@@ -8,7 +8,7 @@ from app.database import get_session
 from app.models import ApiInterface, ApiParameter, ExportRecord, SpecTemplate
 from app.services.examples import build_request_example, build_response_example
 from app.services.markdown_export import render_markdown_document
-from app.services.pdf_export import export_basic_pdf
+from app.services.pdf_export import export_pdf_document
 from app.services.word_export import export_word_document
 
 
@@ -76,7 +76,14 @@ def run_export(
 
     if export_format in {"pdf", "word_pdf", "all"}:
         pdf_path = export_dir / "EAP-EQP接口通讯规格书.pdf"
-        export_basic_pdf(pdf_path, "珠海超毅 EAP-EQP API 接口通讯规格书", watermark)
+        export_pdf_document(
+            pdf_path,
+            interfaces,
+            request_examples,
+            response_examples,
+            parameters_by_interface,
+            watermark,
+        )
         output_files.append(str(pdf_path))
 
     record = ExportRecord(

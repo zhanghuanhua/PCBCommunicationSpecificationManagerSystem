@@ -1,7 +1,10 @@
+import json
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+
+from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
 
 
 def export_basic_pdf(output_path: Path, title: str, watermark_text: str = "") -> Path:
@@ -25,3 +28,163 @@ def export_basic_pdf(output_path: Path, title: str, watermark_text: str = "") ->
     pdf.showPage()
     pdf.save()
     return output_path
+
+
+def export_pdf_document(
+    output_path: Path,
+    interfaces: list[ApiInterface],
+    request_examples: dict[int, dict],
+    response_examples: dict[int, dict],
+    parameters_by_interface: dict[int, list[ApiParameter]],
+    watermark_text: str = "",
+) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf = canvas.Canvas(str(output_path), pagesize=A4)
+    width, height = A4
+    writer = _PdfTextWriter(pdf, width, height, watermark_text)
+    writer.write_title("珠海超毅 EAP-EQP API 接口通讯规格书")
+    writer.write_line("本文档由接口管理系统自动生成。")
+    writer.write_blank()
+    for line in build_pdf_sections(interfaces, request_examples, response_examples, parameters_by_interface):
+        if not line:
+            writer.write_blank()
+        elif line.startswith("# "):
+            writer.write_heading(line[2:], level=1)
+        elif line.startswith("## "):
+            writer.write_heading(line[3:], level=2)
+        elif line.startswith("### "):
+            writer.write_heading(line[4:], level=3)
+        else:
+            writer.write_line(line)
+    writer.save()
+    return output_path
+
+
+def build_pdf_sections(
+    interfaces: list[ApiInterface],
+    request_examples: dict[int, dict],
+    response_examples: dict[int, dict],
+    parameters_by_interface: dict[int, list[ApiParameter]],
+) -> list[str]:
+    lines: list[str] = []
+    _append_direction(lines, interfaces, InterfaceDirection.EQP_TO_EAP, "EQP -> EAP 接口", request_examples, response_examples, parameters_by_interface)
+    _append_direction(lines, interfaces, InterfaceDirection.EAP_TO_EQP, "EAP -> EQP 接口", request_examples, response_examples, parameters_by_interface)
+    return lines
+
+
+def _append_direction(
+    lines: list[str],
+    interfaces: list[ApiInterface],
+    direction: InterfaceDirection,
+    heading: str,
+    request_examples: dict[int, dict],
+    response_examples: dict[int, dict],
+    parameters_by_interface: dict[int, list[ApiParameter]],
+) -> None:
+    lines.extend([f"# {heading}", ""])
+    for item in interfaces:
+        if item.direction != direction:
+            continue
+        key = item.id or 0
+        parameters = parameters_by_interface.get(key, [])
+        lines.extend(
+            [
+                f"## {item.code} {item.name}",
+                f"接口名称: {item.api_name}",
+                f"调用方: {item.caller}",
+                f"提供方: {item.provider}",
+                f"版本: {item.version}",
+                f"接口服务描述: {item.service_description or '-'}",
+                "### 请求参数",
+                "字段名 | 类型 | 必填 | 数组 | 说明",
+                *_parameter_lines(parameters, ParameterKind.REQUEST),
+                "### 响应参数",
+                "字段名 | 类型 | 必填 | 数组 | 说明",
+                *_parameter_lines(parameters, ParameterKind.RESPONSE),
+                "### 日志范例",
+                "请求日志范例",
+                item.request_log_example or json.dumps(request_examples.get(key, {}), ensure_ascii=False, indent=2),
+                "响应日志范例",
+                item.response_log_example or json.dumps(response_examples.get(key, {}), ensure_ascii=False, indent=2),
+                "",
+            ]
+        )
+
+
+def _parameter_lines(parameters: list[ApiParameter], kind: ParameterKind) -> list[str]:
+    items = [
+        parameter
+        for parameter in sorted(parameters, key=lambda item: (item.sort_order, item.id or 0))
+        if parameter.kind == kind
+    ]
+    if not items:
+        return ["无"]
+    return [
+        f"{item.field_name} | {item.data_type} | {'是' if item.required else '否'} | {'是' if item.is_array else '否'} | {item.description}"
+        for item in items
+    ]
+
+
+class _PdfTextWriter:
+    def __init__(self, pdf: canvas.Canvas, width: float, height: float, watermark_text: str) -> None:
+        self.pdf = pdf
+        self.width = width
+        self.height = height
+        self.watermark_text = watermark_text
+        self.y = height - 60
+        self._draw_watermark()
+
+    def write_title(self, text: str) -> None:
+        self._ensure_space(28)
+        self.pdf.setFont("Helvetica", 16)
+        self.pdf.drawString(50, self.y, _safe_pdf_text(text))
+        self.y -= 28
+
+    def write_heading(self, text: str, level: int) -> None:
+        self._ensure_space(24)
+        size = 14 if level == 1 else 12 if level == 2 else 10
+        self.pdf.setFont("Helvetica-Bold", size)
+        self.pdf.drawString(50, self.y, _safe_pdf_text(text))
+        self.y -= 22
+
+    def write_line(self, text: str) -> None:
+        self.pdf.setFont("Helvetica", 9)
+        for line in str(text).splitlines() or [""]:
+            for chunk in _wrap_text(line, 110):
+                self._ensure_space(14)
+                self.pdf.drawString(50, self.y, _safe_pdf_text(chunk))
+                self.y -= 14
+
+    def write_blank(self) -> None:
+        self.y -= 10
+
+    def save(self) -> None:
+        self.pdf.showPage()
+        self.pdf.save()
+
+    def _ensure_space(self, required: int) -> None:
+        if self.y < 60 + required:
+            self.pdf.showPage()
+            self.y = self.height - 60
+            self._draw_watermark()
+
+    def _draw_watermark(self) -> None:
+        if not self.watermark_text:
+            return
+        self.pdf.saveState()
+        self.pdf.setFont("Helvetica", 42)
+        self.pdf.setFillGray(0.85)
+        self.pdf.translate(self.width / 2, self.height / 2)
+        self.pdf.rotate(35)
+        self.pdf.drawCentredString(0, 0, _safe_pdf_text(self.watermark_text))
+        self.pdf.restoreState()
+
+
+def _wrap_text(text: str, max_chars: int) -> list[str]:
+    if len(text) <= max_chars:
+        return [text]
+    return [text[index : index + max_chars] for index in range(0, len(text), max_chars)]
+
+
+def _safe_pdf_text(text: str) -> str:
+    return text.encode("latin-1", errors="replace").decode("latin-1")
