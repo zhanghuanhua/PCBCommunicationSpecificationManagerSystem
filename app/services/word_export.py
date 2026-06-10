@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from docx import Document
+from docx.oxml.ns import qn
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 from docx.table import Table
@@ -30,6 +31,7 @@ def export_word_document(
 
     if template_path:
         _replace_all_version_text(document, version)
+        _ensure_toc_starts_on_new_page(document)
         _remove_existing_interface_content(document)
     else:
         _add_heading(document, "珠海超毅 EAP-EQP API 接口通讯规格书", level=0)
@@ -61,6 +63,7 @@ def export_word_document(
         version,
     )
     _replace_all_version_text(document, version)
+    _compact_interface_start(document)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
@@ -199,6 +202,74 @@ def _remove_existing_interface_content(document: Document) -> None:
         body.remove(child)
 
 
+def _ensure_toc_starts_on_new_page(document: Document) -> None:
+    body = document.element.body
+    children = list(body)
+    for index, child in enumerate(children):
+        if child.tag.endswith("sdt") and "目录" in _element_text(child):
+            if index == 0:
+                return
+            previous = children[index - 1]
+            if _has_page_break(previous) or _has_section_break(previous):
+                return
+            paragraph = document.add_paragraph()
+            paragraph.add_run().add_break()
+            body.remove(paragraph._p)
+            body.insert(index, paragraph._p)
+            return
+
+
+def _compact_interface_start(document: Document) -> None:
+    paragraphs = document.paragraphs
+    for index, paragraph in enumerate(paragraphs):
+        if paragraph.text.strip() != "三、 接口内容":
+            continue
+        paragraph.paragraph_format.page_break_before = False
+        paragraph.paragraph_format.space_before = None
+        paragraph.paragraph_format.space_after = None
+        _remove_empty_paragraphs_before(document, paragraph, limit=80)
+        for next_paragraph in paragraphs[index + 1 : index + 4]:
+            if next_paragraph.text.strip():
+                next_paragraph.paragraph_format.page_break_before = False
+                next_paragraph.paragraph_format.space_before = None
+                break
+        return
+
+
+def _remove_empty_paragraphs_before(document: Document, paragraph: Paragraph, limit: int) -> None:
+    body = document.element.body
+    children = list(body)
+    try:
+        index = children.index(paragraph._p)
+    except ValueError:
+        return
+    removed = 0
+    for candidate in reversed(children[max(0, index - limit) : index]):
+        if removed >= limit:
+            break
+        if not candidate.tag.endswith("p"):
+            continue
+        candidate_paragraph = Paragraph(candidate, document)
+        if candidate_paragraph.text.strip():
+            continue
+        if _has_section_break(candidate):
+            continue
+        body.remove(candidate)
+        removed += 1
+
+
+def _has_page_break(element) -> bool:
+    return any(child.tag.endswith("br") for child in element.iter())
+
+
+def _has_section_break(element) -> bool:
+    return any(child.tag.endswith("sectPr") for child in element.iter())
+
+
+def _element_text(element) -> str:
+    return "".join(getattr(child, "text", None) or "" for child in element.iter() if child.tag.endswith("t"))
+
+
 def _replace_all_version_text(document: Document, version: str) -> None:
     for paragraph in _iter_all_paragraphs(document):
         _replace_version_in_paragraph(paragraph, version)
@@ -256,6 +327,10 @@ def _add_template_like_paragraph(document: Document, template: CT_P | None, text
 
 def _clear_page_break_before(paragraph: Paragraph) -> None:
     paragraph.paragraph_format.page_break_before = False
+    p_pr = paragraph._p.get_or_add_pPr()
+    page_break = p_pr.find(qn("w:pageBreakBefore"))
+    if page_break is not None:
+        p_pr.remove(page_break)
 
 
 def _append_template_table(document: Document, template: CT_Tbl | None, cols: int) -> Table:

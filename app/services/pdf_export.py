@@ -102,7 +102,7 @@ def _word_com_convert(source_docx_path: Path, output_path: Path) -> bool:
         temp_docx = Path(tmp_dir) / "source.docx"
         temp_pdf = Path(tmp_dir) / "source.pdf"
         copy2(source_docx_path, temp_docx)
-        command = _word_com_command(temp_docx, temp_pdf)
+        command = _word_com_command(temp_docx, temp_pdf, source_docx_path.name)
         try:
             result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -114,9 +114,9 @@ def _word_com_convert(source_docx_path: Path, output_path: Path) -> bool:
         return output_path.exists()
 
 
-def _word_com_command(source_docx_path: Path, output_path: Path) -> list[str] | None:
+def _word_com_command(source_docx_path: Path, output_path: Path, display_filename: str = "") -> list[str] | None:
     script = (
-        "& { param($sourcePath, $outputPath)"
+        "& { param($sourcePath, $outputPath, $displayFilename)"
         "$ErrorActionPreference = 'Stop';"
         "$word = New-Object -ComObject Word.Application;"
         "$word.Visible = $false;"
@@ -124,6 +124,14 @@ def _word_com_command(source_docx_path: Path, output_path: Path) -> list[str] | 
         "try {"
         "  $doc = $word.Documents.Open([string]$sourcePath, $false, $true, $false);"
         "  if ($null -eq $doc) { throw 'Word failed to open source document.' }"
+        "  $doc.Fields.Update() | Out-Null;"
+        "  foreach ($toc in $doc.TablesOfContents) { $toc.Update() | Out-Null; }"
+        "  if ($displayFilename) {"
+        "    foreach ($field in $doc.Fields) {"
+        "      if ($field.Code.Text -match 'FILENAME') { $field.Result.Text = $displayFilename }"
+        "    }"
+        "  }"
+        "  $doc.Repaginate();"
         "  $doc.ExportAsFixedFormat([string]$outputPath, 17);"
         "  $doc.Close($false);"
         "} finally {"
@@ -141,6 +149,7 @@ def _word_com_command(source_docx_path: Path, output_path: Path) -> list[str] | 
         script,
         str(source_docx_path.resolve()),
         str(output_path.resolve()),
+        display_filename,
     ]
 
 
