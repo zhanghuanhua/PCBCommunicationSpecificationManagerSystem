@@ -378,7 +378,7 @@ def _fill_interface_table(table: Table, interface: ApiInterface, parameters: lis
         ("detail", ["4", "Content", "object", "参数内容" if request_rows else "空"]),
         ("detail", ["5", "RequestId", "string", "请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）"]),
         ("detail", ["Content", "Content", "Content", "Content"]),
-        *[("detail", row) for row in request_rows],
+        *_typed_parameter_rows(request_rows),
         ("section", ["返回值列表", "返回值列表", "返回值列表", "返回值列表"]),
         ("header", ["序号", "字段", "类型", "描述"]),
         ("detail", ["1", "Code", "string", "结果代码(0000=成功， 其余为错误代号)"]),
@@ -386,7 +386,7 @@ def _fill_interface_table(table: Table, interface: ApiInterface, parameters: lis
         ("detail", ["3", "Msg", "string", "提示讯息"]),
         ("detail", ["4", "DateTime", "DateTime", "系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）"]),
         ("detail", ["5", "Content", "object", "参数内容" if response_rows else "空"]),
-        *[("detail", row) for row in response_rows],
+        *_typed_parameter_rows(response_rows),
         ("detail", ["6", "RequestId", "string", "回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）"]),
     ]
     _replace_rows_from(table, 5, rows)
@@ -399,15 +399,53 @@ def _parameter_rows(parameters: list[ApiParameter], kind: ParameterKind) -> list
         for parameter in sorted(parameters, key=lambda item: (item.sort_order, item.id or 0))
         if parameter.kind == kind
     ]
-    for index, parameter in enumerate(items, start=1):
-        rows.append(
-            [
-                f"4.{index}",
-                parameter.field_name,
-                parameter.data_type,
-                _format_parameter_description(parameter),
-            ]
-        )
+    top_level = [parameter for parameter in items if parameter.parent_id is None]
+    children_by_parent = _children_by_parent(items)
+    for index, parameter in enumerate(top_level, start=1):
+        rows.extend(_parameter_tree_rows(parameter, f"4.{index}", children_by_parent))
+    return rows
+
+
+def _typed_parameter_rows(parameter_rows: list[list[str]]) -> list[tuple[str, list[str]]]:
+    typed_rows = []
+    for row in parameter_rows:
+        row_kind = "group" if len(set(value for value in row if value)) == 1 else "detail"
+        typed_rows.append((row_kind, row))
+    return typed_rows
+
+
+def _children_by_parent(parameters: list[ApiParameter]) -> dict[int, list[ApiParameter]]:
+    children: dict[int, list[ApiParameter]] = {}
+    for parameter in parameters:
+        if parameter.parent_id is None:
+            continue
+        children.setdefault(parameter.parent_id, []).append(parameter)
+    for items in children.values():
+        items.sort(key=lambda item: (item.sort_order, item.id or 0))
+    return children
+
+
+def _parameter_tree_rows(
+    parameter: ApiParameter,
+    fallback_sequence: str,
+    children_by_parent: dict[int, list[ApiParameter]],
+) -> list[list[str]]:
+    if _is_group_parameter(parameter):
+        rows = [[parameter.field_name, "", "", ""]]
+        for index, child in enumerate(children_by_parent.get(parameter.id or 0, []), start=1):
+            rows.extend(_parameter_tree_rows(child, f"{fallback_sequence}.{index}", children_by_parent))
+        return rows
+    sequence = _parameter_sequence(parameter) or fallback_sequence
+    rows = [
+        [
+            sequence,
+            parameter.field_name,
+            parameter.data_type,
+            _format_parameter_description(parameter),
+        ]
+    ]
+    for index, child in enumerate(children_by_parent.get(parameter.id or 0, []), start=1):
+        rows.extend(_parameter_tree_rows(child, f"{sequence}.{index}", children_by_parent))
     return rows
 
 
@@ -429,6 +467,7 @@ def _replace_rows_from(table: Table, start_index: int, rows: list[tuple[str, lis
         "section": section_template,
         "header": header_template,
         "detail": detail_template,
+        "group": detail_template,
     }
     while len(table.rows) > start_index:
         table._tbl.remove(table.rows[-1]._tr)
@@ -436,6 +475,8 @@ def _replace_rows_from(table: Table, start_index: int, rows: list[tuple[str, lis
         new_row = copy.deepcopy(templates[row_kind])
         table._tbl.append(new_row)
         _set_row(table, len(table.rows) - 1, row_values)
+        if row_kind == "group":
+            _merge_row_cells(table.rows[-1])
 
 
 def _ensure_table_rows(table: Table, count: int) -> None:
@@ -448,6 +489,14 @@ def _set_row(table: Table, row_index: int, values: list[str]) -> None:
     for index, value in enumerate(values):
         if index < len(row.cells):
             _set_cell_text(row.cells[index], value)
+
+
+def _merge_row_cells(row) -> None:
+    if len(row.cells) <= 1:
+        return
+    first = row.cells[0]
+    for cell in row.cells[1:]:
+        first = first.merge(cell)
 
 
 def _set_cell_text(cell, text: str) -> None:
@@ -478,6 +527,27 @@ def _format_parameter_description(parameter: ApiParameter) -> str:
     if parameter.is_array:
         suffix = f"{suffix}（数组）"
     return f"{parameter.description}{suffix}" if parameter.description else suffix
+
+
+def _parameter_sequence(parameter: ApiParameter) -> str:
+    metadata = _parameter_metadata(parameter)
+    sequence = metadata.get("sequence")
+    return sequence if isinstance(sequence, str) else ""
+
+
+def _parameter_metadata(parameter: ApiParameter) -> dict:
+    if not parameter.enum_options:
+        return {}
+    try:
+        data = json.loads(parameter.enum_options)
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _is_group_parameter(parameter: ApiParameter) -> bool:
+    metadata = _parameter_metadata(parameter)
+    return bool(metadata.get("is_group")) or not parameter.data_type.strip()
 
 
 def _is_interface_table(table: Table) -> bool:

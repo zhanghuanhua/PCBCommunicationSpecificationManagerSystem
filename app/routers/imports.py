@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import json
 from pathlib import Path
 import re
 from uuid import uuid4
@@ -173,16 +174,39 @@ def _replace_parameters(
     interface_id: int, parsed_parameters: list[ParsedParameter], session: Session
 ) -> None:
     session.exec(delete(ApiParameter).where(ApiParameter.interface_id == interface_id))
+    sequence_to_parameter: dict[str, ApiParameter] = {}
+    pending_parent_links: list[tuple[ApiParameter, str]] = []
     for index, item in enumerate(parsed_parameters, start=1):
-        session.add(
-            ApiParameter(
-                interface_id=interface_id,
-                kind=item.kind,
-                sort_order=index,
-                field_name=item.field_name,
-                data_type=item.data_type,
-                required=item.required,
-                example_value=item.example_value,
-                description=item.description,
-            )
+        parameter = ApiParameter(
+            interface_id=interface_id,
+            kind=item.kind,
+            sort_order=index,
+            field_name=item.field_name,
+            data_type=item.data_type,
+            required=item.required,
+            example_value=item.example_value,
+            description=item.description,
+            enum_options=_parameter_metadata(item),
         )
+        session.add(parameter)
+        session.flush()
+        if item.sequence:
+            sequence_to_parameter[item.sequence] = parameter
+        if item.parent_sequence:
+            pending_parent_links.append((parameter, item.parent_sequence))
+    for parameter, parent_sequence in pending_parent_links:
+        parent = sequence_to_parameter.get(parent_sequence)
+        if parent is not None:
+            parameter.parent_id = parent.id
+            session.add(parameter)
+
+
+def _parameter_metadata(item: ParsedParameter) -> str:
+    return json.dumps(
+        {
+            "sequence": item.sequence,
+            "parent_sequence": item.parent_sequence,
+            "is_group": item.is_group,
+        },
+        ensure_ascii=False,
+    )

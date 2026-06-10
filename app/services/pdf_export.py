@@ -7,6 +7,8 @@ from tempfile import TemporaryDirectory
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+import json
+
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
 
 
@@ -213,9 +215,20 @@ def _parameter_lines(parameters: list[ApiParameter], kind: ParameterKind) -> lis
     if not items:
         return ["无"]
     return [
-        f"{item.field_name} | {item.data_type} | {'是' if item.required else '否'} | {'是' if item.is_array else '否'} | {item.description}"
+        f"{_parameter_sequence(item)} {item.field_name} | {item.data_type} | {'是' if item.required else '否'} | {'是' if item.is_array else '否'} | {item.description}"
         for item in items
     ]
+
+
+def _parameter_sequence(parameter: ApiParameter) -> str:
+    if not parameter.enum_options:
+        return ""
+    try:
+        data = json.loads(parameter.enum_options)
+    except json.JSONDecodeError:
+        return ""
+    sequence = data.get("sequence") if isinstance(data, dict) else ""
+    return sequence if isinstance(sequence, str) else ""
 
 
 class _PdfTextWriter:

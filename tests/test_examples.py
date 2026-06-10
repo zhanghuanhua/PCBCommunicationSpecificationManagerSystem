@@ -96,3 +96,50 @@ def test_build_example_converts_scalar_types_and_arrays():
     assert result["Content"]["Count"] == 3
     assert result["Content"]["Success"] is False
     assert result["Content"]["Items"] == ["A001"]
+
+
+def test_build_request_example_uses_nested_parameter_children():
+    interface = ApiInterface(
+        code="EQP-EAP-005",
+        name="设备任务进展信息上报",
+        direction=InterfaceDirection.EQP_TO_EAP,
+        api_name="EQP_EquipmentJobDataProcessReport",
+        caller="EQP",
+        provider="EAP",
+    )
+    parameters = [
+        ApiParameter(
+            id=1,
+            interface_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=1,
+            field_name="Ext",
+            data_type="ExtInfo",
+            description="扩展信息",
+        ),
+        ApiParameter(
+            id=2,
+            interface_id=1,
+            parent_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=2,
+            field_name="NgPanelList",
+            data_type="List<NgPanel>",
+            description="高压失败的Panel列表",
+        ),
+        ApiParameter(
+            id=3,
+            interface_id=1,
+            parent_id=2,
+            kind=ParameterKind.REQUEST,
+            sort_order=3,
+            field_name="PanelId",
+            data_type="string",
+            example_value="Panel001",
+            description="产品序列码",
+        ),
+    ]
+
+    result = build_request_example(interface, parameters)
+
+    assert result["Content"] == {"Ext": {"NgPanelList": [{"PanelId": "Panel001"}]}}

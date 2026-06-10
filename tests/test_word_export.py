@@ -349,6 +349,79 @@ def test_word_export_places_first_interface_immediately_after_direction_heading(
     assert non_empty[heading_index + 1] == "EQP-EAP-001 连线检查"
 
 
+def test_word_export_preserves_nested_parameter_sequences(tmp_path: Path):
+    interface = ApiInterface(
+        id=1,
+        code="EQP-EAP-005",
+        name="设备任务进展信息上报",
+        direction=InterfaceDirection.EQP_TO_EAP,
+        api_name="EQP_EquipmentJobDataProcessReport",
+        caller="EQP",
+        provider="EAP",
+    )
+    parameters = [
+        ApiParameter(
+            id=1,
+            interface_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=1,
+            field_name="Ext",
+            data_type="ExtInfo",
+            description="扩展信息",
+            enum_options='{"sequence": "4.6"}',
+        ),
+        ApiParameter(
+            id=2,
+            interface_id=1,
+            parent_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=2,
+            field_name="NgPanelList",
+            data_type="List<NgPanel>",
+            description="高压失败的Panel列表",
+            enum_options='{"sequence": "4.6.1", "parent_sequence": "4.6"}',
+        ),
+        ApiParameter(
+            id=3,
+            interface_id=1,
+            parent_id=2,
+            kind=ParameterKind.REQUEST,
+            sort_order=3,
+            field_name="NgPanel",
+            data_type="",
+            description="NgPanel",
+            enum_options='{"parent_sequence": "4.6.1", "is_group": true}',
+        ),
+        ApiParameter(
+            id=4,
+            interface_id=1,
+            parent_id=2,
+            kind=ParameterKind.REQUEST,
+            sort_order=4,
+            field_name="PanelId",
+            data_type="string",
+            description="产品序列码",
+            enum_options='{"sequence": "4.6.1.1", "parent_sequence": "4.6.1"}',
+        ),
+    ]
+    output = tmp_path / "nested.docx"
+
+    export_word_document(
+        output,
+        [interface],
+        {1: {}},
+        {1: {}},
+        parameters_by_interface={1: parameters},
+    )
+
+    document = Document(output)
+    table_text = "\n".join(cell.text for table in document.tables for row in table.rows for cell in row.cells)
+    assert "4.6.1" in table_text
+    assert "4.6.1.1" in table_text
+    assert "NgPanelList" in table_text
+    assert "PanelId" in table_text
+
+
 def test_word_export_starts_toc_on_new_page_after_change_history(tmp_path: Path):
     template_path = tmp_path / "template.docx"
     template = Document()

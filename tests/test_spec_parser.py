@@ -102,6 +102,40 @@ def test_parse_interface_table_sections_extracts_content_parameters(tmp_path: Pa
     assert [item.field_name for item in response_parameters] == ["ControlMode"]
 
 
+def test_parse_interface_table_sections_preserves_nested_sequences_and_groups(tmp_path: Path):
+    docx_path = tmp_path / "nested_sections.docx"
+    document = Document()
+    document.add_heading("EQP-EAP-005 设备任务进展信息上报", level=2)
+    table = document.add_table(rows=0, cols=4)
+    for values in [
+        ["接口名称", "EQP_EquipmentJobDataProcessReport", "", ""],
+        ["请求参数列表", "请求参数列表", "请求参数列表", "请求参数列表"],
+        ["序号", "字段", "类型", "描述"],
+        ["4", "Content", "object", "参数内容"],
+        ["Content", "Content", "Content", "Content"],
+        ["4.6", "Ext", "ExtInfo", "扩展信息"],
+        ["ExtInfo（高压测试机生产结束时上报）", "", "", ""],
+        ["4.6.1", "NgPanelList", "List<NgPanel>", "高压失败的Panel列表"],
+        ["NgPanel", "", "", ""],
+        ["4.6.1.1", "PanelId", "string", "产品序列码"],
+    ]:
+        row = table.add_row()
+        for index, value in enumerate(values):
+            row.cells[index].text = value
+    document.save(docx_path)
+
+    result = parse_interface_basics_from_docx(docx_path)
+
+    request_parameters = [item for item in result[0].parameters if item.kind == ParameterKind.REQUEST]
+    assert [(item.field_name, item.sequence, item.parent_sequence, item.is_group) for item in request_parameters] == [
+        ("Ext", "4.6", "4", False),
+        ("ExtInfo（高压测试机生产结束时上报）", "", "4.6", True),
+        ("NgPanelList", "4.6.1", "4.6", False),
+        ("NgPanel", "", "4.6.1", True),
+        ("PanelId", "4.6.1.1", "4.6.1", False),
+    ]
+
+
 def test_parse_interface_main_table_extracts_summary_fields_and_api_name(tmp_path: Path):
     docx_path = tmp_path / "spec_main_table.docx"
     document = Document()

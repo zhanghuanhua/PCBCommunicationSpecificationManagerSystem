@@ -30,16 +30,40 @@ def build_response_example(interface: ApiInterface, parameters: list[ApiParamete
 
 def _build_content(parameters: list[ApiParameter], kind: ParameterKind) -> dict[str, Any]:
     content: dict[str, Any] = {}
+    children_by_parent = _children_by_parent(parameters, kind)
     for parameter in sorted(parameters, key=lambda item: item.sort_order):
         if parameter.kind != kind or parameter.parent_id is not None:
             continue
-        content[parameter.field_name] = _coerce_example_value(parameter)
+        if _is_group_parameter(parameter):
+            continue
+        content[parameter.field_name] = _coerce_example_value(parameter, children_by_parent)
     return content
 
 
-def _coerce_example_value(parameter: ApiParameter) -> Any:
+def _children_by_parent(parameters: list[ApiParameter], kind: ParameterKind) -> dict[int, list[ApiParameter]]:
+    children: dict[int, list[ApiParameter]] = {}
+    for parameter in parameters:
+        if parameter.kind != kind or parameter.parent_id is None or _is_group_parameter(parameter):
+            continue
+        children.setdefault(parameter.parent_id, []).append(parameter)
+    for items in children.values():
+        items.sort(key=lambda item: item.sort_order)
+    return children
+
+
+def _coerce_example_value(parameter: ApiParameter, children_by_parent: dict[int, list[ApiParameter]]) -> Any:
+    children = children_by_parent.get(parameter.id or 0, [])
     data_type = parameter.data_type.lower()
     value = parameter.example_value
+    if children:
+        nested = {
+            child.field_name: _coerce_example_value(child, children_by_parent)
+            for child in children
+            if not _is_group_parameter(child)
+        }
+        if parameter.is_array or _is_list_type(data_type):
+            return [nested]
+        return nested
     scalar = _coerce_scalar(value, data_type)
     if parameter.is_array:
         return [scalar]
@@ -64,3 +88,11 @@ def _coerce_scalar(value: str, data_type: str) -> Any:
     if data_type in {"object", "jsonobject"}:
         return {}
     return value
+
+
+def _is_list_type(data_type: str) -> bool:
+    return data_type.startswith("list<") or data_type.startswith("array<")
+
+
+def _is_group_parameter(parameter: ApiParameter) -> bool:
+    return not parameter.data_type.strip()

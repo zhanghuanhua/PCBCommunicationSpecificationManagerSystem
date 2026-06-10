@@ -23,6 +23,9 @@ class ParsedParameter:
     required: bool
     example_value: str
     description: str
+    sequence: str = ""
+    parent_sequence: str = ""
+    is_group: bool = False
 
 
 @dataclass(frozen=True)
@@ -277,6 +280,8 @@ def _parse_parameter_table(rows: list[list[str]], kind: ParameterKind) -> list[P
                 required=_parse_required(_cell(row, required_index)),
                 example_value=_cell(row, example_index),
                 description=_cell(row, desc_index) or field_name,
+                sequence="",
+                parent_sequence="",
             )
         )
     return parsed
@@ -289,6 +294,7 @@ def _parse_sectioned_parameter_table(rows: list[list[str]]) -> list[ParsedParame
     type_index: int | None = None
     desc_index: int | None = None
     in_content = False
+    last_sequence_by_depth: dict[int, str] = {}
 
     for row in rows:
         row_text = "".join(row).replace(" ", "")
@@ -298,11 +304,13 @@ def _parse_sectioned_parameter_table(rows: list[list[str]]) -> list[ParsedParame
             current_kind = ParameterKind.RESPONSE
             in_content = False
             field_index = type_index = desc_index = None
+            last_sequence_by_depth = {}
             continue
         if "请求参数列表" in row_text or row_text == "参数列表" * len(row):
             current_kind = ParameterKind.REQUEST
             in_content = False
             field_index = type_index = desc_index = None
+            last_sequence_by_depth = {}
             continue
 
         headers = [_normalize_header(value) for value in row]
@@ -318,15 +326,40 @@ def _parse_sectioned_parameter_table(rows: list[list[str]]) -> list[ParsedParame
 
         if current_kind and _is_content_marker(row):
             in_content = True
+            last_sequence_by_depth = {}
             continue
 
         if not current_kind or not in_content or field_index is None or type_index is None:
             continue
 
+        group_name = _group_title(row)
+        if group_name:
+            parsed.append(
+                ParsedParameter(
+                    kind=current_kind,
+                    field_name=group_name,
+                    data_type="",
+                    required=True,
+                    example_value="",
+                    description=group_name,
+                    sequence="",
+                    parent_sequence=_last_sequence(last_sequence_by_depth),
+                    is_group=True,
+                )
+            )
+            continue
+
+        sequence = _cell(row, 0)
         field_name = _cell(row, field_index)
         data_type = _cell(row, type_index)
         if not field_name or not data_type or field_name.lower() == "content":
             continue
+        parent_sequence = _parent_sequence(sequence)
+        if sequence:
+            last_sequence_by_depth[_sequence_depth(sequence)] = sequence
+            for depth in list(last_sequence_by_depth):
+                if depth > _sequence_depth(sequence):
+                    last_sequence_by_depth.pop(depth, None)
         parsed.append(
             ParsedParameter(
                 kind=current_kind,
@@ -335,6 +368,8 @@ def _parse_sectioned_parameter_table(rows: list[list[str]]) -> list[ParsedParame
                 required=True,
                 example_value="",
                 description=_cell(row, desc_index) or field_name,
+                sequence=sequence,
+                parent_sequence=parent_sequence,
             )
         )
 
@@ -344,6 +379,41 @@ def _parse_sectioned_parameter_table(rows: list[list[str]]) -> list[ParsedParame
 def _is_content_marker(row: list[str]) -> bool:
     values = [value.strip().lower() for value in row if value.strip()]
     return bool(values) and all(value == "content" for value in values)
+
+
+def _group_title(row: list[str]) -> str:
+    values = [value.strip() for value in row if value.strip()]
+    if not values:
+        return ""
+    if len(set(values)) == 1:
+        value = values[0]
+    elif len(values) == 1:
+        value = values[0]
+    else:
+        return ""
+    if value.lower() == "content" or _is_sequence(value):
+        return ""
+    return value
+
+
+def _is_sequence(value: str) -> bool:
+    return bool(re.fullmatch(r"\d+(?:\.\d+)*", value.strip()))
+
+
+def _sequence_depth(sequence: str) -> int:
+    return sequence.count(".") + 1 if _is_sequence(sequence) else 0
+
+
+def _parent_sequence(sequence: str) -> str:
+    if not _is_sequence(sequence) or "." not in sequence:
+        return ""
+    return sequence.rsplit(".", 1)[0]
+
+
+def _last_sequence(last_sequence_by_depth: dict[int, str]) -> str:
+    if not last_sequence_by_depth:
+        return ""
+    return last_sequence_by_depth[max(last_sequence_by_depth)]
 
 
 def _normalize_header(value: str) -> str:
