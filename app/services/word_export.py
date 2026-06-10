@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from docx import Document
+from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
@@ -12,6 +13,10 @@ from docx.text.paragraph import Paragraph
 
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
 from app.services.watermark import add_text_watermark
+
+
+TOC_TITLE = "\u76ee\u5f55"
+INTERFACE_CONTENT_TITLE = "\u63a5\u53e3\u5185\u5bb9"
 
 
 def export_word_document(
@@ -31,8 +36,8 @@ def export_word_document(
 
     if template_path:
         _replace_all_version_text(document, version)
-        _ensure_toc_starts_on_new_page(document)
         _remove_existing_interface_content(document)
+        _ensure_toc_starts_on_new_page(document)
     else:
         _add_heading(document, "珠海超毅 EAP-EQP API 接口通讯规格书", level=0)
         document.add_paragraph(f"Version: {version}")
@@ -185,7 +190,7 @@ def _remove_existing_interface_content(document: Document) -> None:
         if not child.tag.endswith("p"):
             continue
         text = Paragraph(child, document).text.strip()
-        if "接口内容" in text:
+        if INTERFACE_CONTENT_TITLE in text:
             start_index = index
             break
     for index, child in enumerate(children):
@@ -206,14 +211,14 @@ def _ensure_toc_starts_on_new_page(document: Document) -> None:
     body = document.element.body
     children = list(body)
     for index, child in enumerate(children):
-        if child.tag.endswith("sdt") and "目录" in _element_text(child):
+        if child.tag.endswith("sdt") and _is_toc_element(child):
             if index == 0:
                 return
             previous = children[index - 1]
             if _has_page_break(previous) or _has_section_break(previous):
                 return
             paragraph = document.add_paragraph()
-            paragraph.add_run().add_break()
+            paragraph.add_run().add_break(WD_BREAK.PAGE)
             body.remove(paragraph._p)
             body.insert(index, paragraph._p)
             return
@@ -252,18 +257,31 @@ def _remove_empty_paragraphs_before(document: Document, paragraph: Paragraph, li
         candidate_paragraph = Paragraph(candidate, document)
         if candidate_paragraph.text.strip():
             continue
-        if _has_section_break(candidate):
+        if _has_page_break(candidate) or _has_section_break(candidate):
             continue
         body.remove(candidate)
         removed += 1
 
 
 def _has_page_break(element) -> bool:
-    return any(child.tag.endswith("br") for child in element.iter())
+    return any(
+        child.tag.endswith("br") and child.get(qn("w:type")) == "page"
+        for child in element.iter()
+    )
 
 
 def _has_section_break(element) -> bool:
     return any(child.tag.endswith("sectPr") for child in element.iter())
+
+
+def _is_toc_element(element) -> bool:
+    text = _element_text(element)
+    instructions = "".join(
+        getattr(child, "text", None) or ""
+        for child in element.iter()
+        if child.tag.endswith("instrText")
+    )
+    return TOC_TITLE in text or "TOC" in instructions.upper()
 
 
 def _element_text(element) -> str:

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from docx import Document
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt
 
@@ -348,6 +349,48 @@ def test_word_export_places_first_interface_immediately_after_direction_heading(
     assert non_empty[heading_index + 1] == "EQP-EAP-001 连线检查"
 
 
+def test_word_export_starts_toc_on_new_page_after_change_history(tmp_path: Path):
+    template_path = tmp_path / "template.docx"
+    template = Document()
+    change_log = template.add_table(rows=1, cols=4)
+    _set_test_row(change_log, 0, "2026-06-10", "张涣化", "4.5", "更新规格书内容")
+    template.add_paragraph("三、 接口内容")
+    template.add_paragraph("1. EQP -> EAP 接口")
+    template.add_paragraph("EQP-EAP-001 旧接口")
+    old_table = template.add_table(rows=0, cols=4)
+    _add_test_row(old_table, "需求说明", "旧", "旧", "旧")
+    _add_test_row(old_table, "接口名称", "OLD_API", "OLD_API", "OLD_API")
+    old_log = template.add_table(rows=0, cols=3)
+    _add_test_row(old_log, "日志范例", "请求", "OLD_LOG")
+    _insert_toc_sdt_after_first_table(template, "目录")
+    template.save(template_path)
+    interface = ApiInterface(
+        id=1,
+        code="EQP-EAP-001",
+        name="连线检查",
+        direction=InterfaceDirection.EQP_TO_EAP,
+        api_name="EQP_AliveCheck",
+        caller="EQP",
+        provider="EAP",
+    )
+    output = tmp_path / "toc_page_break.docx"
+
+    export_word_document(output, [interface], {1: {}}, {1: {}}, template_path=template_path)
+
+    document = Document(output)
+    children = list(document.element.body)
+    toc_index = next(
+        index
+        for index, child in enumerate(children)
+        if child.tag.endswith("sdt") and "目录" in "".join(node.text or "" for node in child.iter() if node.tag.endswith("t"))
+    )
+    previous = children[toc_index - 1]
+    assert any(
+        node.tag.endswith("br") and node.get(qn("w:type")) == "page"
+        for node in previous.iter()
+    )
+
+
 def test_word_export_groups_by_code_prefix_and_appends_new_eap_to_eqp_interface(tmp_path: Path):
     existing = ApiInterface(
         id=1,
@@ -421,3 +464,19 @@ def _cell_fill(cell) -> str:
     tc_pr = cell._tc.tcPr
     shading = tc_pr.find(qn("w:shd")) if tc_pr is not None else None
     return shading.get(qn("w:fill")) if shading is not None else ""
+
+
+def _insert_toc_sdt_after_first_table(document: Document, title: str) -> None:
+    sdt = OxmlElement("w:sdt")
+    sdt_content = OxmlElement("w:sdtContent")
+    paragraph = OxmlElement("w:p")
+    run = OxmlElement("w:r")
+    text = OxmlElement("w:t")
+    text.text = title
+    run.append(text)
+    paragraph.append(run)
+    sdt_content.append(paragraph)
+    sdt.append(sdt_content)
+    body = document.element.body
+    first_table_index = next(index for index, child in enumerate(body) if child.tag.endswith("tbl"))
+    body.insert(first_table_index + 1, sdt)
