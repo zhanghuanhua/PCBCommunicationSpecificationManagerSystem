@@ -4,11 +4,8 @@ import re
 from pathlib import Path
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
-from docx.shared import Pt
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 
@@ -32,7 +29,7 @@ def export_word_document(
     version = document_version or _version_from_interfaces(interfaces)
 
     if template_path:
-        _normalize_template_front_matter(document, version)
+        _replace_all_version_text(document, version)
         _remove_existing_interface_content(document)
     else:
         _add_heading(document, "珠海超毅 EAP-EQP API 接口通讯规格书", level=0)
@@ -40,7 +37,6 @@ def export_word_document(
         document.add_paragraph("本文档由接口管理系统自动生成。")
         document.add_page_break()
 
-    _ensure_toc_page(document, interfaces, version)
     _add_template_like_paragraph(document, templates.heading, "三、 接口内容")
     _append_direction(
         document,
@@ -65,7 +61,6 @@ def export_word_document(
         version,
     )
     _replace_all_version_text(document, version)
-    _remove_toc_fields_and_bookmarks(document)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
@@ -204,101 +199,6 @@ def _remove_existing_interface_content(document: Document) -> None:
         body.remove(child)
 
 
-def _normalize_template_front_matter(document: Document, version: str) -> None:
-    _replace_all_version_text(document, version)
-    _remove_toc_fields_and_bookmarks(document)
-
-
-def _ensure_toc_page(document: Document, interfaces: list[ApiInterface], version: str) -> None:
-    body = document.element.body
-    insert_index = _remove_existing_toc(document)
-    if insert_index is None:
-        return
-    created = []
-    before_break = document.add_paragraph()
-    before_break.add_run().add_break()
-    created.append(before_break._p)
-    title = document.add_paragraph("目录")
-    created.append(title._p)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    if title.runs:
-        title.runs[0].bold = True
-        title.runs[0].font.size = Pt(18)
-    _add_toc_line(document, created, "珠海超毅 EAP-EQP API 接口通讯规格书", "1", 0)
-    _add_toc_line(document, created, "一、 文档概述", "", 0)
-    _add_toc_line(document, created, "二、 约定", "", 0)
-    _add_toc_line(document, created, "1.接口参数定义：", "", 1)
-    _add_toc_line(document, created, "2.基础访问地址：", "", 1)
-    _add_toc_line(document, created, "三、 接口内容", "", 0)
-    _add_toc_line(document, created, "1.EQP -> EAP 接口", "", 0)
-    for item in _interfaces_for_direction(interfaces, InterfaceDirection.EQP_TO_EAP):
-        _add_toc_line(document, created, f"{item.code} {item.name}", "", 1)
-    _add_toc_line(document, created, "2.EAP -> EQP 接口", "", 0)
-    for item in _interfaces_for_direction(interfaces, InterfaceDirection.EAP_TO_EQP):
-        _add_toc_line(document, created, f"{item.code} {item.name}", "", 1)
-    after_break = document.add_paragraph()
-    after_break.add_run().add_break()
-    created.append(after_break._p)
-    for element in created:
-        body.remove(element)
-    for offset, element in enumerate(created):
-        body.insert(insert_index + offset, element)
-
-
-def _remove_existing_toc(document: Document) -> int | None:
-    body = document.element.body
-    children = list(body)
-    for index, child in enumerate(children):
-        if child.tag.endswith("sdt") and _element_text(child).strip().startswith("目录"):
-            body.remove(child)
-            before = _previous_paragraph_index_with_page_break(children, index)
-            if before is not None and children[before].getparent() is body:
-                body.remove(children[before])
-                return before
-            return index
-        if child.tag.endswith("p") and Paragraph(child, document).text.strip() == "目录":
-            end_index = _toc_end_index(children, index + 1, document)
-            for item in children[index:end_index]:
-                if item.getparent() is body:
-                    body.remove(item)
-            before = _previous_paragraph_index_with_page_break(children, index)
-            if before is not None and children[before].getparent() is body:
-                body.remove(children[before])
-                return before
-            return index
-    return None
-
-
-def _previous_paragraph_index_with_page_break(children: list, index: int) -> int | None:
-    for candidate in range(index - 1, max(-1, index - 4), -1):
-        if children[candidate].tag.endswith("p") and children[candidate].find(".//" + qn("w:br")) is not None:
-            return candidate
-    return None
-
-
-def _toc_end_index(children: list, start_index: int, document: Document) -> int:
-    for index in range(start_index, len(children)):
-        child = children[index]
-        if not child.tag.endswith("p"):
-            continue
-        text = Paragraph(child, document).text.strip()
-        if text.startswith("一、") or text.startswith("三、") or text.startswith("1."):
-            return index
-    return start_index
-
-
-def _add_toc_line(document: Document, created: list, title: str, page: str, level: int) -> None:
-    paragraph = document.add_paragraph()
-    created.append(paragraph._p)
-    paragraph.paragraph_format.left_indent = Pt(18 * level)
-    paragraph.paragraph_format.space_after = Pt(0)
-    paragraph.paragraph_format.line_spacing = 1.0
-    paragraph.add_run(title)
-    if page:
-        paragraph.add_run("\t")
-        paragraph.add_run(page)
-
-
 def _replace_all_version_text(document: Document, version: str) -> None:
     for paragraph in _iter_all_paragraphs(document):
         _replace_version_in_paragraph(paragraph, version)
@@ -327,24 +227,6 @@ def _replace_version_in_paragraph(paragraph: Paragraph, version: str) -> None:
     new_text = re.sub(r"([vV])\d+(?:\.\d+)*", rf"\g<1>{version}", new_text)
     if new_text != text:
         _set_paragraph_text(paragraph, new_text)
-
-
-def _remove_toc_fields_and_bookmarks(document: Document) -> None:
-    body = document.element.body
-    for el in list(body.iter()):
-        tag = el.tag
-        if tag in {qn("w:bookmarkStart"), qn("w:bookmarkEnd")}:
-            name = el.get(qn("w:name"), "")
-            if name.startswith("_Toc") or tag == qn("w:bookmarkEnd"):
-                parent = el.getparent()
-                if parent is not None:
-                    parent.remove(el)
-        if tag == qn("w:instrText") and el.text and ("TOC" in el.text or "PAGEREF" in el.text or "REF" in el.text):
-            el.text = ""
-
-
-def _element_text(element) -> str:
-    return "".join(node.text or "" for node in element.iter() if node.tag == qn("w:t"))
 
 
 def _previous_interface_heading_index(children, table_index: int, document: Document) -> int:
