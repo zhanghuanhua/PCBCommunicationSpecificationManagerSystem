@@ -13,7 +13,7 @@
   {% if message %}
   <div class="success-block">
     <strong>{{ message }}</strong>
-    <span>{{ template.original_filename }}</span>
+    <span>{{ template.original_filename }} 已保存为 v{{ spec_version.version }} 版本</span>
   </div>
   {% endif %}
   {% if import_result %}
@@ -21,7 +21,7 @@
     <div class="section-heading">
       <div>
         <h2>本次解析结果</h2>
-        <p>解析出的接口已保存为草稿，可在工作台继续确认和维护。</p>
+        <p>解析出的接口已保存到 v{{ spec_version.version }} 规格书版本，可进入该版本继续维护。</p>
       </div>
     </div>
     <div class="stats-grid import-stats-grid">
@@ -95,7 +95,10 @@
     </div>
     <div class="actions">
       <button type="submit">开始导入</button>
-      <a href="/">返回工作台</a>
+      {% if spec_version %}
+      <a href="/specs/{{ spec_version.id }}">进入该版本</a>
+      {% endif %}
+      <a href="/">返回版本管理</a>
     </div>
   </form>
 </section>

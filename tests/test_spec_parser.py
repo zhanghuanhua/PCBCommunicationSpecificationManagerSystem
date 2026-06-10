@@ -102,6 +102,34 @@ def test_parse_interface_table_sections_extracts_content_parameters(tmp_path: Pa
     assert [item.field_name for item in response_parameters] == ["ControlMode"]
 
 
+def test_parse_interface_main_table_extracts_summary_fields_and_api_name(tmp_path: Path):
+    docx_path = tmp_path / "spec_main_table.docx"
+    document = Document()
+    document.add_heading("EQP-EAP-002 设备状态上报", level=2)
+    table = document.add_table(rows=0, cols=4)
+    for values in [
+        ["需求说明", "设备状态上报", "设备状态上报", "设备状态上报"],
+        ["使用场景", "设备状态发生变化时，上报到 EAP 系统记录", "设备状态发生变化时，上报到 EAP 系统记录", "设备状态发生变化时，上报到 EAP 系统记录"],
+        ["接口名称", "EQP_EquipmentCurrentStatus", "EQP_EquipmentCurrentStatus", "EQP_EquipmentCurrentStatus"],
+        ["接口方式", "接口调用方", "接口提供方", "接口服务描述"],
+        ["Web API", "EQP", "EAP", "设备状态上报"],
+    ]:
+        row = table.add_row()
+        for index, value in enumerate(values):
+            row.cells[index].text = value
+    document.save(docx_path)
+
+    result = parse_interface_basics_from_docx(docx_path)
+
+    assert len(result) == 1
+    assert result[0].requirement == "设备状态上报"
+    assert result[0].scenario == "设备状态发生变化时，上报到 EAP 系统记录"
+    assert result[0].api_name == "EQP_EquipmentCurrentStatus"
+    assert result[0].caller == "EQP"
+    assert result[0].provider == "EAP"
+    assert result[0].service_description == "设备状态上报"
+
+
 def test_parse_interface_log_examples_from_log_table(tmp_path: Path):
     docx_path = tmp_path / "spec_log_examples.docx"
     document = Document()

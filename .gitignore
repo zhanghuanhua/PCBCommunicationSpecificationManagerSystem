@@ -7,3 +7,4 @@ data/templates/
 exports/*.docx
 exports/*.pdf
 exports/*.md
+tmp/

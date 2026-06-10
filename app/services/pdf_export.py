@@ -1,10 +1,17 @@
 import json
+import subprocess
+from shutil import copy2
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
+
+
+class PdfConversionError(RuntimeError):
+    pass
 
 
 def export_basic_pdf(output_path: Path, title: str, watermark_text: str = "") -> Path:
@@ -37,27 +44,104 @@ def export_pdf_document(
     response_examples: dict[int, dict],
     parameters_by_interface: dict[int, list[ApiParameter]],
     watermark_text: str = "",
+    source_docx_path: Path | None = None,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    pdf = canvas.Canvas(str(output_path), pagesize=A4)
-    width, height = A4
-    writer = _PdfTextWriter(pdf, width, height, watermark_text)
-    writer.write_title("珠海超毅 EAP-EQP API 接口通讯规格书")
-    writer.write_line("本文档由接口管理系统自动生成。")
-    writer.write_blank()
-    for line in build_pdf_sections(interfaces, request_examples, response_examples, parameters_by_interface):
-        if not line:
-            writer.write_blank()
-        elif line.startswith("# "):
-            writer.write_heading(line[2:], level=1)
-        elif line.startswith("## "):
-            writer.write_heading(line[3:], level=2)
-        elif line.startswith("### "):
-            writer.write_heading(line[4:], level=3)
-        else:
-            writer.write_line(line)
-    writer.save()
-    return output_path
+    if source_docx_path and _convert_docx_to_pdf(source_docx_path, output_path):
+        return output_path
+    raise PdfConversionError("PDF 转换失败：请安装 Microsoft Word 或 LibreOffice 后重试。")
+
+
+def _convert_docx_to_pdf(source_docx_path: Path, output_path: Path) -> bool:
+    source_docx_path = source_docx_path.resolve()
+    output_path = output_path.resolve()
+    converters = [
+        _word_com_convert,
+        [
+            "soffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(output_path.parent.resolve()),
+            str(source_docx_path.resolve()),
+        ],
+        [
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(output_path.parent.resolve()),
+            str(source_docx_path.resolve()),
+        ],
+    ]
+    for command in converters:
+        if not command:
+            continue
+        try:
+            if callable(command):
+                if command(source_docx_path, output_path):
+                    return True
+                continue
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+        if result.returncode != 0:
+            continue
+        converted = output_path.parent / f"{source_docx_path.stem}.pdf"
+        if converted.exists():
+            if converted.resolve() != output_path.resolve():
+                converted.replace(output_path)
+            return True
+    return False
+
+
+def _word_com_convert(source_docx_path: Path, output_path: Path) -> bool:
+    with TemporaryDirectory(prefix="eap_pdf_") as tmp_dir:
+        temp_docx = Path(tmp_dir) / "source.docx"
+        temp_pdf = Path(tmp_dir) / "source.pdf"
+        copy2(source_docx_path, temp_docx)
+        command = _word_com_command(temp_docx, temp_pdf)
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return False
+        if result.returncode != 0 or not temp_pdf.exists():
+            return False
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        copy2(temp_pdf, output_path)
+        return output_path.exists()
+
+
+def _word_com_command(source_docx_path: Path, output_path: Path) -> list[str] | None:
+    script = (
+        "& { param($sourcePath, $outputPath)"
+        "$ErrorActionPreference = 'Stop';"
+        "$word = New-Object -ComObject Word.Application;"
+        "$word.Visible = $false;"
+        "$doc = $null;"
+        "try {"
+        "  $doc = $word.Documents.Open([string]$sourcePath, $false, $true, $false);"
+        "  if ($null -eq $doc) { throw 'Word failed to open source document.' }"
+        "  $doc.ExportAsFixedFormat([string]$outputPath, 17);"
+        "  $doc.Close($false);"
+        "} finally {"
+        "  if ($null -ne $doc) { try { $doc.Close($false) } catch {} }"
+        "  $word.Quit();"
+        "}"
+        "}"
+    )
+    return [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        script,
+        str(source_docx_path.resolve()),
+        str(output_path.resolve()),
+    ]
 
 
 def build_pdf_sections(

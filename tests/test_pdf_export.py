@@ -1,7 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
-from app.services.pdf_export import build_pdf_sections, export_basic_pdf, export_pdf_document
+from app.services.pdf_export import PdfConversionError, build_pdf_sections, export_basic_pdf, export_pdf_document
 
 
 def test_basic_pdf_export_creates_file(tmp_path: Path):
@@ -67,7 +69,7 @@ def test_pdf_export_sections_include_interface_parameters_and_logs():
     assert '"Result":true' in content
 
 
-def test_full_pdf_export_creates_file_with_interface_content(tmp_path: Path):
+def test_full_pdf_export_requires_docx_conversion_source(tmp_path: Path):
     interface = ApiInterface(
         id=1,
         code="EQP-EAP-201",
@@ -89,14 +91,14 @@ def test_full_pdf_export_creates_file_with_interface_content(tmp_path: Path):
     )
     output = tmp_path / "full_spec.pdf"
 
-    export_pdf_document(
-        output,
-        [interface],
-        {1: {"Content": {"LotId": "L001"}}},
-        {1: {"Content": {}}},
-        {1: [parameter]},
-        watermark_text="厂商查看",
-    )
+    with pytest.raises(PdfConversionError):
+        export_pdf_document(
+            output,
+            [interface],
+            {1: {"Content": {"LotId": "L001"}}},
+            {1: {"Content": {}}},
+            {1: [parameter]},
+            watermark_text="厂商查看",
+        )
 
-    assert output.exists()
-    assert output.stat().st_size > 0
+    assert not output.exists()

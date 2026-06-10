@@ -33,6 +33,9 @@ class ParsedInterface:
     api_name: str
     caller: str
     provider: str
+    requirement: str
+    scenario: str
+    service_description: str
     parameters: list[ParsedParameter]
     request_log_example: str
     response_log_example: str
@@ -61,8 +64,11 @@ def parse_interface_basics_from_docx(docx_path: Path) -> list[ParsedInterface]:
 
         name = _extract_name(line, code)
         text_index = text_index_by_block_index[block_index]
-        api_name = _find_api_name(lines, text_index, code)
+        main_table = _extract_main_table_fields(blocks, block_index)
+        api_name = main_table.get("api_name") or _find_api_name(lines, text_index, code)
         direction, caller, provider = _direction_parties(code)
+        caller = main_table.get("caller") or caller
+        provider = main_table.get("provider") or provider
         parameters = _extract_parameters_for_interface(blocks, block_index)
         request_log_example, response_log_example = _extract_log_examples_for_interface(blocks, block_index)
         parsed.append(
@@ -73,6 +79,9 @@ def parse_interface_basics_from_docx(docx_path: Path) -> list[ParsedInterface]:
                 api_name=api_name or _default_api_name(code),
                 caller=caller,
                 provider=provider,
+                requirement=main_table.get("requirement", ""),
+                scenario=main_table.get("scenario", ""),
+                service_description=main_table.get("service_description", ""),
                 parameters=parameters,
                 request_log_example=request_log_example,
                 response_log_example=response_log_example,
@@ -129,6 +138,54 @@ def _find_api_name(lines: list[str], start_index: int, code: str) -> str:
         if match:
             return match.group(0)
     return _default_api_name(code)
+
+
+def _extract_main_table_fields(blocks: list[dict], start_block_index: int) -> dict[str, str]:
+    for block in blocks[start_block_index + 1 :]:
+        if block["type"] == "text" and INTERFACE_CODE_PATTERN.search(block["text"]):
+            break
+        if block["type"] != "table":
+            continue
+        fields = _parse_main_table(block["rows"])
+        if fields:
+            return fields
+    return {}
+
+
+def _parse_main_table(rows: list[list[str]]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for row_index, row in enumerate(rows):
+        label = _normalize_header(_cell(row, 0))
+        if label in {"需求说明", "闇€姹傝鏄�"}:
+            fields["requirement"] = _first_value_after_label(row)
+            continue
+        if label in {"使用场景", "浣跨敤鍦烘櫙"}:
+            fields["scenario"] = _first_value_after_label(row)
+            continue
+        if label in {"接口名称", "鎺ュ彛鍚嶇О"}:
+            fields["api_name"] = _first_value_after_label(row)
+            continue
+        if label in {"webapi", "web api"} and len(row) >= 4:
+            fields["caller"] = _cell(row, 1)
+            fields["provider"] = _cell(row, 2)
+            fields["service_description"] = _cell(row, 3)
+            continue
+        row_text = "".join(row).replace(" ", "")
+        if ("接口服务描述" in row_text or "鎺ュ彛鏈嶅姟鎻忚堪" in row_text) and row_index + 1 < len(rows):
+            next_row = rows[row_index + 1]
+            if len(next_row) >= 4 and _normalize_header(_cell(next_row, 0)) in {"webapi", "web api"}:
+                fields["caller"] = _cell(next_row, 1)
+                fields["provider"] = _cell(next_row, 2)
+                fields["service_description"] = _cell(next_row, 3)
+    return {key: value for key, value in fields.items() if value}
+
+
+def _first_value_after_label(row: list[str]) -> str:
+    for value in row[1:]:
+        value = value.strip()
+        if value:
+            return value
+    return ""
 
 
 def _direction_parties(code: str) -> tuple[InterfaceDirection, str, str]:

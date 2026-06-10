@@ -1,7 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
-<form class="form-panel" method="post" action="/exports">
+{% if message %}
+<div class="table-wrap">
+  <p class="empty empty-block">{{ message }}</p>
+  <a class="button" href="/imports/spec">导入原规格书</a>
+  <a class="button secondary" href="/">返回版本管理</a>
+</div>
+{% else %}
+<form class="form-panel" method="post" action="/exports" data-export-form>
+  <input type="hidden" name="choose_output_dir" value="true">
+  <input type="hidden" name="spec_version_id" value="{{ spec_version.id if spec_version else '' }}">
+  {% if spec_version %}
+  <section class="form-context">
+    <p class="eyebrow">Version {{ spec_version.version }}</p>
+    <h2>导出 {{ spec_version.name }} v{{ spec_version.version }}</h2>
+    <p>只导出当前版本下已经存在的接口。填写新版本号后，系统会保存一个新的规格书版本。</p>
+  </section>
+  {% endif %}
   <label>
     导出格式
     <select name="export_format">
@@ -20,9 +36,51 @@
     水印文字
     <input name="watermark_text" value="厂商查看">
   </label>
+  <label>
+    导出后保存为版本号
+    <input name="target_version" value="{{ spec_version.version if spec_version else '4.0' }}" placeholder="例如 4.1">
+    <small class="muted">和当前版本相同则更新当前版本；填写 4.1 这类新版本号会复制当前接口并保存为新版本。</small>
+  </label>
+  <label>
+    保存位置
+    <input name="output_dir" placeholder="留空则点击导出后选择保存文件夹">
+    <small class="muted">导出时会弹出文件夹选择窗口，文件将直接保存到你选择的位置。</small>
+  </label>
   <div class="actions">
-    <button type="submit">开始导出</button>
-    <a href="/">返回工作台</a>
+    <button type="submit" data-export-submit>开始导出</button>
+    {% if spec_version %}
+    <a href="/specs/{{ spec_version.id }}">返回工作台</a>
+    {% else %}
+    <a href="/">返回版本管理</a>
+    {% endif %}
   </div>
+  <p class="muted export-progress" data-export-progress hidden>正在导出，请稍候...</p>
+  <p class="muted export-progress" data-export-timeout hidden>选择保存位置超时，如未看到文件夹选择窗口，请重新点击开始导出。</p>
 </form>
+<script>
+  const exportForm = document.querySelector("[data-export-form]");
+  const exportButton = document.querySelector("[data-export-submit]");
+  const exportProgress = document.querySelector("[data-export-progress]");
+  const exportTimeout = document.querySelector("[data-export-timeout]");
+  exportForm?.addEventListener("submit", () => {
+    exportButton.disabled = true;
+    exportButton.textContent = "正在导出...";
+    exportProgress.hidden = false;
+    if (exportTimeout) {
+      exportTimeout.hidden = true;
+    }
+    window.setTimeout(() => {
+      if (!exportButton.disabled) {
+        return;
+      }
+      exportButton.disabled = false;
+      exportButton.textContent = "开始导出";
+      exportProgress.hidden = true;
+      if (exportTimeout) {
+        exportTimeout.hidden = false;
+      }
+    }, 120000);
+  });
+</script>
+{% endif %}
 {% endblock %}

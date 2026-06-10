@@ -4,13 +4,13 @@
 <section class="hero-panel">
   <div>
     <p class="eyebrow">EAP-EQP API Specification</p>
-    <h2>接口管理工作台</h2>
-    <p>结构化维护 EAP-EQP 接口，基于原规格书生成 Word/PDF，减少人工编辑错误。</p>
+    <h2>{{ spec_version.name }} v{{ spec_version.version }}</h2>
+    <p>当前正在维护该版本下的接口内容，导出新版本后会回到版本管理中保存。</p>
   </div>
   <div class="hero-actions">
-    <a class="button" href="/interfaces/new">新增接口</a>
-    <a class="button secondary" href="/imports/spec">导入原规格书</a>
-    <a class="button secondary" href="/exports">导出 Word/PDF</a>
+    <a class="button secondary" href="/">版本管理</a>
+    <a class="button" href="/specs/{{ spec_version.id }}/interfaces/new">新增接口</a>
+    <a class="button secondary" href="/exports?spec_version_id={{ spec_version.id }}">导出 Word/PDF</a>
   </div>
 </section>
 
@@ -41,7 +41,7 @@
     </div>
   </div>
   <div class="quick-actions-grid">
-    <a class="action-card" href="/interfaces/new">
+    <a class="action-card" href="/specs/{{ spec_version.id }}/interfaces/new">
       <strong>新增接口</strong>
       <span>创建 EQP 上报或 EAP 下发接口</span>
     </a>
@@ -49,7 +49,7 @@
       <strong>导入原规格书</strong>
       <span>上传现有 Word，作为后续导出模板</span>
     </a>
-    <a class="action-card" href="/exports">
+    <a class="action-card" href="/exports?spec_version_id={{ spec_version.id }}">
       <strong>导出规格书</strong>
       <span>选择 Word、PDF、Markdown 和水印</span>
     </a>
@@ -72,24 +72,36 @@
       <p>按方向、状态和版本查看接口。</p>
     </div>
     <div class="filters">
-      <a class="filter {{ 'active' if active_direction == 'all' and active_status == 'all' else '' }}" href="/?direction=all">全部</a>
-      <a class="filter {{ 'active' if active_direction == 'EQP_TO_EAP' else '' }}" href="/?direction=EQP_TO_EAP">EQP -> EAP</a>
-      <a class="filter {{ 'active' if active_direction == 'EAP_TO_EQP' else '' }}" href="/?direction=EAP_TO_EQP">EAP -> EQP</a>
-      <a class="filter {{ 'active' if active_status == 'DRAFT' else '' }}" href="/?status=DRAFT">草稿</a>
+      <a class="filter {{ 'active' if active_direction == 'all' and active_status == 'all' else '' }}" href="/specs/{{ spec_version.id }}?direction=all">全部</a>
+      <a class="filter {{ 'active' if active_direction == 'EQP_TO_EAP' else '' }}" href="/specs/{{ spec_version.id }}?direction=EQP_TO_EAP">EQP -> EAP</a>
+      <a class="filter {{ 'active' if active_direction == 'EAP_TO_EQP' else '' }}" href="/specs/{{ spec_version.id }}?direction=EAP_TO_EQP">EAP -> EQP</a>
+      <a class="filter {{ 'active' if active_status == 'DRAFT' else '' }}" href="/specs/{{ spec_version.id }}?status=DRAFT">草稿</a>
     </div>
   </div>
   <div class="interface-table-scroll">
-    <table>
+    <table data-resizable-table>
+      <colgroup>
+        <col style="width: 150px;">
+        <col style="width: 260px;">
+        <col style="width: 110px;">
+        <col style="width: 330px;">
+        <col style="width: 80px;">
+        <col style="width: 80px;">
+        <col style="width: 70px;">
+        <col style="width: 80px;">
+        <col style="width: 90px;">
+      </colgroup>
       <thead>
         <tr>
-          <th>接口编号</th>
-          <th>接口名称</th>
-          <th>方向</th>
-          <th>API 名称</th>
-          <th>调用方</th>
-          <th>提供方</th>
-          <th>版本</th>
-          <th>状态</th>
+          <th>接口编号<span data-column-resizer></span></th>
+          <th>接口名称<span data-column-resizer></span></th>
+          <th>方向<span data-column-resizer></span></th>
+          <th>API 名称<span data-column-resizer></span></th>
+          <th>调用方<span data-column-resizer></span></th>
+          <th>提供方<span data-column-resizer></span></th>
+          <th>版本<span data-column-resizer></span></th>
+          <th>状态<span data-column-resizer></span></th>
+          <th>操作<span data-column-resizer></span></th>
         </tr>
       </thead>
       <tbody>
@@ -102,17 +114,51 @@
           <td>{{ item.caller }}</td>
           <td>{{ item.provider }}</td>
           <td>{{ item.version }}</td>
-          <td><span class="status-badge">{{ "草稿" if item.status == "DRAFT" else item.status }}</span></td>
+          <td>
+            {% if item.status == "DRAFT" %}
+            <span class="status-badge status-draft">草稿</span>
+            {% else %}
+            <span class="status-badge status-normal">正常</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="/interfaces/{{ item.id }}/delete" onsubmit="return confirm('确认删除这个接口吗？删除后导出 Word/PDF 将不再包含它。');">
+              <button class="danger-button" type="submit">删除</button>
+            </form>
+          </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="8" class="empty">暂无接口，请先新增接口。</td>
+          <td colspan="9" class="empty">暂无接口，请先新增接口。</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
+
+<script>
+  document.querySelectorAll("[data-resizable-table]").forEach((table) => {
+    const cols = table.querySelectorAll("col");
+    table.querySelectorAll("[data-column-resizer]").forEach((handle, index) => {
+      handle.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        const startX = event.clientX;
+        const startWidth = cols[index].getBoundingClientRect().width;
+        const onMove = (moveEvent) => {
+          const nextWidth = Math.max(64, startWidth + moveEvent.clientX - startX);
+          cols[index].style.width = `${nextWidth}px`;
+        };
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    });
+  });
+</script>
 
 <section class="table-wrap recent-panel">
   <div class="section-heading">

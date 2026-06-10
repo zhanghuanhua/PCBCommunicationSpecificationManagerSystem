@@ -3,13 +3,26 @@
 {% block content %}
 <div class="table-wrap">
   <h2>已生成文件</h2>
+  <div class="success-block">
+    <strong>导出成功</strong>
+    <span>文件已保存到你选择的文件夹。规格书版本 v{{ spec_version.version }} 已保存在系统中。</span>
+  </div>
   <p class="muted">文件已保存到以下完整路径。</p>
-  <ul class="path-list">
-    {% for file in absolute_output_files %}
-    <li><code>{{ file }}</code></li>
+  <ul class="path-list export-file-list">
+    {% for file in exported_files %}
+    <li class="export-file-item">
+      <div>
+        <strong>{{ file.name }}</strong>
+        <code>{{ file.absolute_path }}</code>
+      </div>
+      <div class="row-actions">
+        <a class="button secondary small-button" href="/exports/open-folder/{{ file.name }}">查看保存位置</a>
+      </div>
+    </li>
     {% endfor %}
   </ul>
   <a class="button" href="/exports">继续导出</a>
-  <a class="button secondary" href="/">返回工作台</a>
+  <a class="button secondary" href="/specs/{{ spec_version.id }}">进入该版本</a>
+  <a class="button secondary" href="/">返回版本管理</a>
 </div>
 {% endblock %}

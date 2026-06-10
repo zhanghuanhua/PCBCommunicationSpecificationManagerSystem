@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel">
+  <div>
+    <p class="eyebrow">Specification Versions</p>
+    <h2>规格书版本管理</h2>
+    <p>先管理通讯规格书版本，再进入对应版本维护接口内容，导出新版本后也会保存在这里。</p>
+  </div>
+  <div class="hero-actions">
+    <a class="button" href="/imports/spec">导入原规格书</a>
+  </div>
+</section>
+
+<section class="spec-version-grid">
+  {% for card in version_cards %}
+  {% set spec = card.spec %}
+  <article class="spec-version-card">
+    <div class="spec-card-header">
+      <div>
+        <p class="eyebrow">Version {{ spec.version }}</p>
+        <h2>{{ spec.name }} v{{ spec.version }}</h2>
+        <p>{{ spec.original_filename or "系统默认版本" }}</p>
+      </div>
+      <span class="status-badge {{ 'status-normal' if spec.status in ['IMPORTED', 'EXPORTED'] else 'status-draft' }}">
+        {{ "已导出" if spec.status == "EXPORTED" else "已导入" if spec.status == "IMPORTED" else spec.status }}
+      </span>
+    </div>
+    <div class="version-stats-row">
+      <div><span>接口总数</span><strong>{{ card.total }}</strong></div>
+      <div><span>EQP -> EAP</span><strong>{{ card.eqp_to_eap }}</strong></div>
+      <div><span>EAP -> EQP</span><strong>{{ card.eap_to_eqp }}</strong></div>
+      <div><span>草稿</span><strong>{{ card.draft }}</strong></div>
+    </div>
+    <div class="spec-card-actions">
+      <a class="button" href="/specs/{{ spec.id }}">进入管理</a>
+      <a class="button secondary" href="/exports?spec_version_id={{ spec.id }}">导出</a>
+      <form method="post" action="/specs/{{ spec.id }}/delete" onsubmit="return confirm('确认删除这个规格书版本吗？该版本下的接口和参数也会删除。');">
+        <button class="danger-button" type="submit">删除</button>
+      </form>
+    </div>
+  </article>
+  {% else %}
+  <div class="table-wrap">
+    <p class="empty empty-block">暂无规格书版本，请先导入原规格书。</p>
+    <a class="button" href="/imports/spec">导入原规格书</a>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

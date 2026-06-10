@@ -2,11 +2,17 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from docx import Document
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.database import get_session
 from app.main import app
-from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind, SpecTemplate
+from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind, SpecTemplate, SpecVersion
+from app.routers import exports as exports_router
+from app.services.pdf_export import PdfConversionError
+
+
+def _latest_export(pattern: str) -> Path:
+    return max(Path("exports").glob(pattern), key=lambda path: path.stat().st_mtime)
 
 
 def test_export_center_page_shows_format_and_watermark_options():
@@ -18,24 +24,28 @@ def test_export_center_page_shows_format_and_watermark_options():
     assert "导出中心" in response.text
     assert "Word + PDF" in response.text
     assert "添加水印" in response.text
+    assert "window.setTimeout" in response.text
+    assert "选择保存位置超时" in response.text
 
 
 def test_export_center_creates_markdown_file():
     client = TestClient(app)
-    output = Path("exports/EAP-EQP接口通讯规格书.md")
-    if output.exists():
-        output.unlink()
+    before = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.md"))
 
     response = client.post(
         "/exports",
         data={
             "export_format": "markdown",
             "watermark_text": "厂商查看",
+            "target_version": "4.0",
         },
     )
 
     assert response.status_code == 200
     assert "导出结果" in response.text
+    created = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.md")) - before
+    assert created
+    output = created.pop()
     assert output.exists()
     assert "珠海超毅 EAP-EQP API 接口通讯规格书" in output.read_text(encoding="utf-8")
     assert str(output.resolve()) in response.text
@@ -51,6 +61,15 @@ def test_export_center_uses_imported_template_for_word(tmp_path):
     template.save(template_path)
 
     with Session(engine) as session:
+        spec_version = SpecVersion(
+            version="4.0",
+            original_filename="原规格书.docx",
+            template_path=str(template_path),
+        )
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
         session.add(
             SpecTemplate(
                 original_filename="原规格书.docx",
@@ -65,9 +84,7 @@ def test_export_center_uses_imported_template_for_word(tmp_path):
             yield session
 
     app.dependency_overrides[get_session] = override_session
-    output = Path("exports/EAP-EQP接口通讯规格书.docx")
-    if output.exists():
-        output.unlink()
+    before = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.docx"))
 
     try:
         client = TestClient(app)
@@ -76,25 +93,109 @@ def test_export_center_uses_imported_template_for_word(tmp_path):
             data={
                 "export_format": "word",
                 "watermark_text": "厂商查看",
+                    "spec_version_id": str(spec_version_id),
+                "target_version": "4.0",
             },
         )
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
+    created = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.docx")) - before
+    assert created
+    output = created.pop()
     assert output.exists()
     exported = Document(output)
     body_text = "\n".join(paragraph.text for paragraph in exported.paragraphs)
     assert "原规格书标题" in body_text
     assert "原规格书已有章节" in body_text
-    assert "系统新增接口内容" in body_text
+    assert "接口内容" in body_text
+
+
+def test_export_result_page_provides_download_links():
+    client = TestClient(app)
+    before = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.md"))
+
+    response = client.post(
+        "/exports",
+        data={"export_format": "markdown", "target_version": "4.0"},
+    )
+
+    assert response.status_code == 200
+    created = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.md")) - before
+    assert created
+    output = created.pop()
+    assert f"/exports/download/{output.name}" not in response.text
+    assert f"/exports/open-folder/{output.name}" in response.text
+    assert "导出成功" in response.text
+
+
+def test_word_pdf_export_reports_pdf_failure(tmp_path, monkeypatch):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    def fake_word_export(output_path, *args, **kwargs):
+        Path(output_path).write_text("word ok", encoding="utf-8")
+
+    def fake_pdf_export(*args, **kwargs):
+        raise PdfConversionError("PDF conversion failed")
+
+    app.dependency_overrides[get_session] = override_session
+    monkeypatch.setattr(exports_router, "export_word_document", fake_word_export)
+    monkeypatch.setattr(exports_router, "export_pdf_document", fake_pdf_export)
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={
+                "export_format": "word_pdf",
+                "spec_version_id": str(spec_version_id),
+                "target_version": "4.0",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "PDF conversion failed" in response.text
+    assert "导出成功" not in response.text
+
+
+def test_export_download_returns_generated_file():
+    client = TestClient(app)
+    export_dir = Path("exports")
+    export_dir.mkdir(exist_ok=True)
+    output = export_dir / "download-test.md"
+    output.write_text("download ok", encoding="utf-8")
+
+    response = client.get(f"/exports/download/{output.name}")
+
+    assert response.status_code == 200
+    assert response.text == "download ok"
 
 
 def test_export_center_word_includes_saved_parameters(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
         interface = ApiInterface(
+            spec_version_id=spec_version.id,
             code="EQP-EAP-201",
             name="参数导出测试",
             direction=InterfaceDirection.EQP_TO_EAP,
@@ -123,17 +224,78 @@ def test_export_center_word_includes_saved_parameters(tmp_path):
             yield session
 
     app.dependency_overrides[get_session] = override_session
-    output = Path("exports/EAP-EQP接口通讯规格书.docx")
-    if output.exists():
-        output.unlink()
+    before = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.docx"))
 
     try:
         client = TestClient(app)
-        response = client.post("/exports", data={"export_format": "word"})
+        response = client.post(
+            "/exports",
+            data={"export_format": "word", "spec_version_id": str(spec_version_id), "target_version": "4.0"},
+        )
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
+    created = set(Path("exports").glob("EAP-EQP接口通讯规格书_v*.docx")) - before
+    assert created
+    output = created.pop()
     exported = Document(output)
-    body_text = "\n".join(paragraph.text for paragraph in exported.paragraphs)
-    assert '"LotId": "L001"' in body_text
+    table_text = "\n".join(
+        cell.text
+        for table in exported.tables
+        for row in table.rows
+        for cell in row.cells
+    )
+    assert "LotId" in table_text
+
+
+def test_export_as_new_version_saves_version_record(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EQP-EAP-001",
+                name="连线检查",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_AliveCheck",
+                caller="EQP",
+                provider="EAP",
+            )
+        )
+        session.commit()
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={
+                "export_format": "markdown",
+                "spec_version_id": str(spec_version_id),
+                "target_version": "4.1",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    with Session(engine) as session:
+        versions = session.exec(select(SpecVersion).order_by(SpecVersion.version)).all()
+        copied = session.exec(
+            select(ApiInterface).where(ApiInterface.version == "4.1")
+        ).one()
+
+    assert [item.version for item in versions] == ["4.0", "4.1"]
+    assert copied.code == "EQP-EAP-001"

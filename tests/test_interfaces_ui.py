@@ -1,16 +1,21 @@
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.database import get_session
 from app.main import app
-from app.models import ApiInterface, ApiParameter, InterfaceDirection, InterfaceStatus, ParameterKind
+from app.models import ApiInterface, ApiParameter, InterfaceDirection, InterfaceStatus, ParameterKind, SpecVersion
 
 
 def _client_with_interface(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
         interface = ApiInterface(
+            spec_version_id=spec_version.id,
             code="EQP-EAP-101",
             name="设备状态上报",
             direction=InterfaceDirection.EQP_TO_EAP,
@@ -23,6 +28,7 @@ def _client_with_interface(tmp_path):
         session.commit()
         session.refresh(interface)
         interface_id = interface.id
+        spec_version_id = spec_version.id
 
     def override_session():
         with Session(engine) as session:
@@ -36,7 +42,12 @@ def _client_with_parameter(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
         interface = ApiInterface(
+            spec_version_id=spec_version.id,
             code="EQP-EAP-101",
             name="设备状态上报",
             direction=InterfaceDirection.EQP_TO_EAP,
@@ -76,7 +87,12 @@ def _client_with_parameter_and_log(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
         interface = ApiInterface(
+            spec_version_id=spec_version.id,
             code="EQP-EAP-101",
             name="设备状态上报",
             direction=InterfaceDirection.EQP_TO_EAP,
@@ -119,11 +135,61 @@ def test_home_page_shows_interface_workspace_actions():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "接口管理工作台" in response.text
-    assert "结构化维护 EAP-EQP 接口" in response.text
-    assert "新增接口" in response.text
+    assert "规格书版本管理" in response.text
     assert "导入原规格书" in response.text
-    assert "导出中心" in response.text
+
+
+def test_home_page_stays_empty_after_all_versions_are_deleted(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0", original_filename="原规格书.docx")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(f"/specs/{spec_version_id}/delete", follow_redirects=True)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "暂无规格书版本" in response.text
+    assert "Version 4.0" not in response.text
+    assert "进入管理" not in response.text
+
+
+def test_spec_workspace_shows_interface_workspace_actions(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.get(f"/specs/{spec_version_id}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "导入原规格书" in response.text
+    assert "导出规格书" in response.text
     assert "接口总数" in response.text
     assert "快捷操作" in response.text
     assert "最近导出记录" in response.text
@@ -132,33 +198,52 @@ def test_home_page_shows_interface_workspace_actions():
 def test_home_page_uses_vertical_workspace_layout():
     client = TestClient(app)
 
-    response = client.get("/")
+    home_response = client.get("/")
+    assert home_response.status_code == 200
+    import re
+
+    match = re.search(r'href="/specs/(\d+)"', home_response.text)
+    assert match
+    response = client.get(f"/specs/{match.group(1)}")
 
     assert response.status_code == 200
     assert 'class="quick-actions-panel"' in response.text
     assert "interface-list-panel" in response.text
     assert 'class="interface-table-scroll"' in response.text
+    assert 'data-resizable-table' in response.text
+    assert 'data-column-resizer' in response.text
     assert "workspace-grid" not in response.text
 
 
 def test_home_page_filter_buttons_are_links():
     client = TestClient(app)
 
-    response = client.get("/")
+    home_response = client.get("/")
+    import re
+
+    match = re.search(r'href="/specs/(\d+)"', home_response.text)
+    assert match
+    spec_id = match.group(1)
+    response = client.get(f"/specs/{spec_id}")
 
     assert response.status_code == 200
-    assert 'href="/?direction=all"' in response.text
-    assert 'href="/?direction=EQP_TO_EAP"' in response.text
-    assert 'href="/?direction=EAP_TO_EQP"' in response.text
-    assert 'href="/?status=DRAFT"' in response.text
+    assert f'href="/specs/{spec_id}?direction=all"' in response.text
+    assert f'href="/specs/{spec_id}?direction=EQP_TO_EAP"' in response.text
+    assert f'href="/specs/{spec_id}?direction=EAP_TO_EQP"' in response.text
+    assert f'href="/specs/{spec_id}?status=DRAFT"' in response.text
 
 
 def test_home_page_filters_interfaces_by_direction(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
         session.add(
             ApiInterface(
+                spec_version_id=spec_version.id,
                 code="EQP-EAP-001",
                 name="设备上报",
                 direction=InterfaceDirection.EQP_TO_EAP,
@@ -170,6 +255,7 @@ def test_home_page_filters_interfaces_by_direction(tmp_path):
         )
         session.add(
             ApiInterface(
+                spec_version_id=spec_version.id,
                 code="EAP-EQP-001",
                 name="EAP下发",
                 direction=InterfaceDirection.EAP_TO_EQP,
@@ -180,6 +266,7 @@ def test_home_page_filters_interfaces_by_direction(tmp_path):
             )
         )
         session.commit()
+        spec_version_id = spec_version.id
 
     def override_session():
         with Session(engine) as session:
@@ -188,13 +275,114 @@ def test_home_page_filters_interfaces_by_direction(tmp_path):
     app.dependency_overrides[get_session] = override_session
     try:
         client = TestClient(app)
-        response = client.get("/?direction=EQP_TO_EAP")
+        response = client.get(f"/specs/{spec_version_id}?direction=EQP_TO_EAP")
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert "设备上报" in response.text
     assert "EAP下发" not in response.text
+
+
+def test_home_page_direction_filter_uses_code_prefix_when_saved_direction_conflicts(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EAP-EQP-0038",
+                name="编号为EAP下发",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_BadDirection",
+                caller="EQP",
+                provider="EAP",
+                status=InterfaceStatus.PUBLISHED,
+            )
+        )
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EQP-EAP-001",
+                name="设备上报",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_Report",
+                caller="EQP",
+                provider="EAP",
+                status=InterfaceStatus.PUBLISHED,
+            )
+        )
+        session.commit()
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.get(f"/specs/{spec_version_id}?direction=EQP_TO_EAP")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "设备上报" in response.text
+    assert "编号为EAP下发" not in response.text
+
+
+def test_home_page_shows_normal_status_for_published_interfaces(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EQP-EAP-001",
+                name="设备上报",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_Report",
+                caller="EQP",
+                provider="EAP",
+                status=InterfaceStatus.PUBLISHED,
+            )
+        )
+        session.commit()
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.get(f"/specs/{spec_version_id}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "正常" in response.text
+    assert "status-draft" not in response.text
+
+
+def test_delete_interface_from_home_page_removes_interface(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(f"/interfaces/{interface_id}/delete", follow_redirects=True)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "EQP-EAP-101" not in response.text
 
 
 def test_new_interface_page_shows_create_form():
@@ -207,6 +395,72 @@ def test_new_interface_page_shows_create_form():
     assert "接口方向" in response.text
     assert "EQP -> EAP" in response.text
     assert "EAP -> EQP" in response.text
+    assert "请求参数" in response.text
+    assert "响应参数" in response.text
+    assert 'name="request_field_name"' in response.text
+    assert 'name="response_field_name"' in response.text
+
+
+def test_create_interface_can_save_parameters_from_new_page(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/interfaces",
+                data={
+                    "spec_version_id": str(spec_version_id),
+                    "direction": "EAP_TO_EQP",
+                "code": "EAP-EQP-040",
+                "name": "其他打码数据上报",
+                "api_name": "EAP_OtherCodeData",
+                "requirement": "新增需求",
+                "scenario": "新增场景",
+                "service_description": "新增服务",
+                "version": "4.0",
+                "request_field_name": ["MaData"],
+                "request_data_type_choice": ["string"],
+                "request_custom_data_type": [""],
+                "request_example_value": ["D001"],
+                "request_description": ["打码数据"],
+                "request_required": ["0"],
+                "request_is_array": ["0"],
+                "response_field_name": ["Result"],
+                "response_data_type_choice": ["bool"],
+                "response_custom_data_type": [""],
+                "response_example_value": ["true"],
+                "response_description": ["执行结果"],
+                "response_required": ["0"],
+                "response_is_array": ["0"],
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert f"/interfaces/" in str(response.url)
+    assert "MaData" in response.text
+    assert "Result" in response.text
+    with Session(engine) as session:
+        interface = session.exec(select(ApiInterface).where(ApiInterface.code == "EAP-EQP-040")).one()
+        parameters = session.exec(
+            select(ApiParameter).where(ApiParameter.interface_id == interface.id).order_by(ApiParameter.kind)
+        ).all()
+    assert interface.direction == InterfaceDirection.EAP_TO_EQP
+    assert {parameter.field_name for parameter in parameters} == {"MaData", "Result"}
 
 
 def test_import_spec_page_shows_template_import_placeholder():

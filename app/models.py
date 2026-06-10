@@ -21,9 +21,22 @@ class ParameterKind(str, Enum):
     RESPONSE = "RESPONSE"
 
 
+class SpecVersion(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = "超毅项目 Web API 通讯规格书"
+    version: str = Field(index=True)
+    original_filename: str = ""
+    template_path: str = ""
+    status: str = "IMPORTED"
+    source_version_id: int | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class ApiInterface(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    code: str = Field(index=True, unique=True)
+    spec_version_id: int | None = Field(default=None, index=True, foreign_key="specversion.id")
+    code: str = Field(index=True)
     name: str
     direction: InterfaceDirection
     api_name: str = Field(index=True)

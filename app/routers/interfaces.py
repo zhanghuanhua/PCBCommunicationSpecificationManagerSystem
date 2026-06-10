@@ -1,13 +1,15 @@
 import json
 from datetime import UTC, datetime
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from app.database import get_session
-from app.models import ApiInterface, ApiParameter, InterfaceDirection, InterfaceStatus, ParameterKind
+from app.models import ApiInterface, ApiParameter, InterfaceDirection, InterfaceStatus, ParameterKind, SpecVersion
 from app.services.examples import build_request_example, build_response_example
 
 
@@ -18,6 +20,7 @@ PARAMETER_TYPE_OPTIONS = ["string", "list", "bool", "DateTime", "Int", "object"]
 
 @router.post("")
 def create_interface(
+    spec_version_id: int | None = Form(None),
     code: str = Form(...),
     name: str = Form(...),
     direction: InterfaceDirection = Form(...),
@@ -27,11 +30,30 @@ def create_interface(
     service_description: str = Form(""),
     version: str = Form("4.0"),
     module: str = Form(""),
+    request_field_name: Annotated[list[str], Form()] = [],
+    request_data_type_choice: Annotated[list[str], Form()] = [],
+    request_custom_data_type: Annotated[list[str], Form()] = [],
+    request_example_value: Annotated[list[str], Form()] = [],
+    request_description: Annotated[list[str], Form()] = [],
+    request_required: Annotated[list[str], Form()] = [],
+    request_is_array: Annotated[list[str], Form()] = [],
+    response_field_name: Annotated[list[str], Form()] = [],
+    response_data_type_choice: Annotated[list[str], Form()] = [],
+    response_custom_data_type: Annotated[list[str], Form()] = [],
+    response_example_value: Annotated[list[str], Form()] = [],
+    response_description: Annotated[list[str], Form()] = [],
+    response_required: Annotated[list[str], Form()] = [],
+    response_is_array: Annotated[list[str], Form()] = [],
     session: Session = Depends(get_session),
 ):
+    spec_version = session.get(SpecVersion, spec_version_id) if spec_version_id else _latest_spec_version(session)
+    if not spec_version:
+        raise HTTPException(status_code=400, detail="暂无规格书版本，请先导入原规格书")
+    spec_version_id = spec_version.id or 0
     caller = "EQP" if direction == InterfaceDirection.EQP_TO_EAP else "EAP"
     provider = "EAP" if direction == InterfaceDirection.EQP_TO_EAP else "EQP"
     interface = ApiInterface(
+        spec_version_id=spec_version_id,
         code=code,
         name=name,
         direction=direction,
@@ -41,14 +63,60 @@ def create_interface(
         requirement=requirement,
         scenario=scenario,
         service_description=service_description,
-        version=version,
+        version=version or spec_version.version,
         module=module,
         status=InterfaceStatus.DRAFT,
         updated_at=datetime.now(UTC),
     )
     session.add(interface)
+    session.flush()
+    _add_parameters_from_new_form(
+        interface.id or 0,
+        ParameterKind.REQUEST,
+        request_field_name,
+        request_data_type_choice,
+        request_custom_data_type,
+        request_example_value,
+        request_description,
+        request_required,
+        request_is_array,
+        session,
+    )
+    _add_parameters_from_new_form(
+        interface.id or 0,
+        ParameterKind.RESPONSE,
+        response_field_name,
+        response_data_type_choice,
+        response_custom_data_type,
+        response_example_value,
+        response_description,
+        response_required,
+        response_is_array,
+        session,
+    )
     session.commit()
-    return RedirectResponse("/", status_code=303)
+    _sync_log_example(interface.id or 0, ParameterKind.REQUEST, session)
+    _sync_log_example(interface.id or 0, ParameterKind.RESPONSE, session)
+    return RedirectResponse(f"/interfaces/{interface.id}", status_code=303)
+
+
+def _latest_spec_version(session: Session) -> SpecVersion | None:
+    return session.exec(select(SpecVersion).order_by(SpecVersion.created_at.desc())).first()
+
+
+@router.post("/{interface_id}/delete")
+def delete_interface(
+    interface_id: int,
+    session: Session = Depends(get_session),
+):
+    interface = session.get(ApiInterface, interface_id)
+    if not interface:
+        raise HTTPException(status_code=404, detail="接口不存在")
+    session.exec(delete(ApiParameter).where(ApiParameter.interface_id == interface_id))
+    spec_version_id = interface.spec_version_id
+    session.delete(interface)
+    session.commit()
+    return RedirectResponse(f"/specs/{spec_version_id}" if spec_version_id else "/", status_code=303)
 
 
 @router.get("/{interface_id}")
@@ -60,6 +128,7 @@ def interface_detail(
     interface = session.get(ApiInterface, interface_id)
     if not interface:
         raise HTTPException(status_code=404, detail="接口不存在")
+    spec_version = session.get(SpecVersion, interface.spec_version_id) if interface.spec_version_id else None
     parameters = session.exec(
         select(ApiParameter)
         .where(ApiParameter.interface_id == interface_id)
@@ -71,6 +140,7 @@ def interface_detail(
         {
             "title": interface.name,
             "interface": interface,
+            "spec_version": spec_version,
             "request_parameters": [item for item in parameters if item.kind == ParameterKind.REQUEST],
             "response_parameters": [item for item in parameters if item.kind == ParameterKind.RESPONSE],
             "kinds": ParameterKind,
@@ -115,6 +185,7 @@ def add_parameter(
     )
     session.add(parameter)
     interface.updated_at = datetime.now(UTC)
+    interface.status = InterfaceStatus.DRAFT
     session.add(interface)
     session.commit()
     session.refresh(parameter)
@@ -151,6 +222,7 @@ def update_parameter(
     parameter.description = description
     session.add(parameter)
     interface.updated_at = datetime.now(UTC)
+    interface.status = InterfaceStatus.DRAFT
     session.add(interface)
     session.commit()
     _sync_log_example(interface_id, kind, session)
@@ -170,6 +242,7 @@ def delete_parameter(
     kind = parameter.kind
     session.delete(parameter)
     interface.updated_at = datetime.now(UTC)
+    interface.status = InterfaceStatus.DRAFT
     session.add(interface)
     session.commit()
     _sync_log_example(interface_id, kind, session)
@@ -183,6 +256,47 @@ def _resolve_data_type(data_type: str, data_type_choice: str, custom_data_type: 
             raise HTTPException(status_code=400, detail="选择自定义时必须填写自定义类型")
         return custom_type
     return (data_type_choice or data_type).strip()
+
+
+def _add_parameters_from_new_form(
+    interface_id: int,
+    kind: ParameterKind,
+    field_names: list[str],
+    data_type_choices: list[str],
+    custom_data_types: list[str],
+    example_values: list[str],
+    descriptions: list[str],
+    required_flags: list[str],
+    array_flags: list[str],
+    session: Session,
+) -> None:
+    for index, field_name in enumerate(field_names):
+        field_name = field_name.strip()
+        if not field_name:
+            continue
+        session.add(
+            ApiParameter(
+                interface_id=interface_id,
+                kind=kind,
+                sort_order=index + 1,
+                field_name=field_name,
+                data_type=_resolve_data_type(
+                    "",
+                    _list_value(data_type_choices, index, "string"),
+                    _list_value(custom_data_types, index),
+                ),
+                required=_list_value(required_flags, index, "1") == "1",
+                is_array=_list_value(array_flags, index, "0") == "1",
+                example_value=_list_value(example_values, index),
+                description=_list_value(descriptions, index, field_name),
+            )
+        )
+
+
+def _list_value(values: list[str], index: int, default: str = "") -> str:
+    if index >= len(values):
+        return default
+    return values[index].strip()
 
 
 def _sync_log_example(interface_id: int, kind: ParameterKind, session: Session) -> None:
@@ -224,6 +338,7 @@ def save_log_examples(
     interface.request_log_example = request_log_example
     interface.response_log_example = response_log_example
     interface.updated_at = datetime.now(UTC)
+    interface.status = InterfaceStatus.DRAFT
     session.add(interface)
     session.commit()
     return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
