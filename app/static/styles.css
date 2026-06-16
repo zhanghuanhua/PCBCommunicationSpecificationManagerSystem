@@ -671,6 +671,12 @@ textarea {
   gap: 14px;
 }
 
+.path-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
 .radio-list {
   display: grid;
   gap: 10px;
@@ -722,6 +728,10 @@ textarea {
   }
 
   .export-file-item {
+    grid-template-columns: 1fr;
+  }
+
+  .path-picker-row {
     grid-template-columns: 1fr;
   }
 

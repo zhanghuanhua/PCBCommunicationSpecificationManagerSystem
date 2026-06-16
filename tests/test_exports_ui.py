@@ -27,7 +27,36 @@ def test_export_center_page_shows_format_and_watermark_options():
     assert "修改人姓名" in response.text
     assert "修改内容" in response.text
     assert "window.setTimeout" in response.text
-    assert "选择保存位置超时" in response.text
+    assert "选择文件夹" in response.text
+    assert "系统会记住本次选择的位置" in response.text
+
+
+def test_export_center_prefills_last_output_dir(tmp_path, monkeypatch):
+    saved_dir = tmp_path / "saved"
+    saved_dir.mkdir()
+    monkeypatch.setattr(exports_router, "_last_output_dir", lambda: str(saved_dir))
+    client = TestClient(app)
+
+    response = client.get("/exports")
+
+    assert response.status_code == 200
+    assert str(saved_dir) in response.text
+
+
+def test_select_output_dir_saves_last_choice(tmp_path, monkeypatch):
+    selected_dir = tmp_path / "selected"
+    selected_dir.mkdir()
+    captured = {}
+    monkeypatch.setattr(exports_router, "_last_output_dir", lambda: "")
+    monkeypatch.setattr(exports_router, "_choose_export_dir", lambda initial_dir="": selected_dir)
+    monkeypatch.setattr(exports_router, "_save_last_output_dir", lambda path: captured.setdefault("path", path))
+    client = TestClient(app)
+
+    response = client.post("/exports/select-output-dir")
+
+    assert response.status_code == 200
+    assert response.json() == {"selected": True, "path": str(selected_dir)}
+    assert captured["path"] == selected_dir
 
 
 def test_export_center_creates_markdown_file():

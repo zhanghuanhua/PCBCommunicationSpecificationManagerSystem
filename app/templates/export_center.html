@@ -9,7 +9,7 @@
 </div>
 {% else %}
 <form class="form-panel" method="post" action="/exports" data-export-form>
-  <input type="hidden" name="choose_output_dir" value="true">
+  <input type="hidden" name="choose_output_dir" value="false">
   <input type="hidden" name="spec_version_id" value="{{ spec_version.id if spec_version else '' }}">
   {% if spec_version %}
   <section class="form-context">
@@ -53,9 +53,13 @@
   </label>
   <label>
     保存位置
-    <input name="output_dir" placeholder="留空则点击导出后选择保存文件夹">
-    <small class="muted">导出时会弹出文件夹选择窗口，文件将直接保存到你选择的位置。</small>
+    <div class="path-picker-row">
+      <input name="output_dir" value="{{ last_output_dir or '' }}" placeholder="请先选择保存文件夹" data-output-dir required>
+      <button type="button" class="secondary" data-pick-output-dir>选择文件夹</button>
+    </div>
+    <small class="muted">系统会记住本次选择的位置，下次导出时默认带出。</small>
   </label>
+  <p class="muted export-progress" data-path-picker-status hidden></p>
   <div class="actions">
     <button type="submit" data-export-submit>开始导出</button>
     {% if spec_version %}
@@ -72,6 +76,36 @@
   const exportButton = document.querySelector("[data-export-submit]");
   const exportProgress = document.querySelector("[data-export-progress]");
   const exportTimeout = document.querySelector("[data-export-timeout]");
+  const outputDirInput = document.querySelector("[data-output-dir]");
+  const pickOutputDirButton = document.querySelector("[data-pick-output-dir]");
+  const pathPickerStatus = document.querySelector("[data-path-picker-status]");
+  pickOutputDirButton?.addEventListener("click", async () => {
+    pickOutputDirButton.disabled = true;
+    pickOutputDirButton.textContent = "正在打开...";
+    if (pathPickerStatus) {
+      pathPickerStatus.hidden = false;
+      pathPickerStatus.textContent = "请在弹出的窗口中选择保存文件夹。";
+    }
+    try {
+      const response = await fetch("/exports/select-output-dir", { method: "POST" });
+      const result = await response.json();
+      if (result.selected && result.path) {
+        outputDirInput.value = result.path;
+        if (pathPickerStatus) {
+          pathPickerStatus.textContent = "已选择保存位置。";
+        }
+      } else if (pathPickerStatus) {
+        pathPickerStatus.textContent = result.message || "未选择保存位置。";
+      }
+    } catch (error) {
+      if (pathPickerStatus) {
+        pathPickerStatus.textContent = "选择保存位置失败，请手动填写文件夹路径。";
+      }
+    } finally {
+      pickOutputDirButton.disabled = false;
+      pickOutputDirButton.textContent = "选择文件夹";
+    }
+  });
   exportForm?.addEventListener("submit", () => {
     exportButton.disabled = true;
     exportButton.textContent = "正在导出...";

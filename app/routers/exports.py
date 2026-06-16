@@ -1,11 +1,12 @@
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import re
 import subprocess
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, delete, select
 
@@ -20,6 +21,7 @@ from app.services.word_export import export_word_document
 router = APIRouter(prefix="/exports")
 templates = Jinja2Templates(directory="app/templates")
 EXPORT_DIR = Path("exports")
+EXPORT_SETTINGS_PATH = Path("data/export_settings.json")
 
 
 @router.get("")
@@ -35,8 +37,18 @@ def export_center(
         {
             "title": "导出中心",
             "spec_version": spec_version,
+            "last_output_dir": _last_output_dir(),
         },
     )
+
+
+@router.post("/select-output-dir")
+def select_output_dir():
+    selected = _choose_export_dir(_last_output_dir())
+    if selected is None:
+        return JSONResponse({"selected": False, "message": "未选择保存位置。"})
+    _save_last_output_dir(selected)
+    return {"selected": True, "path": str(selected)}
 
 
 @router.post("")
@@ -93,6 +105,8 @@ def run_export(
             {
                 "title": "导出中心",
                 "message": "未选择保存位置，已取消导出。",
+                "spec_version": spec_version,
+                "last_output_dir": _last_output_dir(),
             },
         )
     export_version = target_version.strip() or spec_version.version
@@ -168,6 +182,7 @@ def run_export(
         result="success",
     )
     session.add(record)
+    _save_last_output_dir(export_dir)
     saved_spec_version = _save_exported_spec_version(
         session,
         source=spec_version,
@@ -465,7 +480,7 @@ def _find_recorded_export_file(filename: str) -> Path | None:
 def _selected_export_dir(output_dir: str, choose_output_dir: bool = False) -> Path | None:
     selected = Path(output_dir).expanduser() if output_dir.strip() else None
     if selected is None and choose_output_dir:
-        selected = _choose_export_dir()
+        selected = _choose_export_dir(_last_output_dir())
         if selected is None:
             return None
     if not selected:
@@ -474,12 +489,40 @@ def _selected_export_dir(output_dir: str, choose_output_dir: bool = False) -> Pa
     return selected
 
 
-def _choose_export_dir() -> Path | None:
+def _choose_export_dir(initial_dir: str = "") -> Path | None:
+    selected = _choose_export_dir_with_tk(initial_dir)
+    if selected is not None:
+        return selected
+    return _choose_export_dir_with_powershell(initial_dir)
+
+
+def _choose_export_dir_with_tk(initial_dir: str = "") -> Path | None:
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected = filedialog.askdirectory(
+            title="请选择规格书导出保存位置",
+            initialdir=initial_dir if initial_dir and Path(initial_dir).exists() else None,
+            mustexist=False,
+        )
+        root.destroy()
+    except Exception:
+        return None
+    return Path(selected) if selected else None
+
+
+def _choose_export_dir_with_powershell(initial_dir: str = "") -> Path | None:
+    initial_dir = initial_dir.replace("'", "''") if initial_dir else ""
     script = (
         "Add-Type -AssemblyName System.Windows.Forms;"
         "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;"
         "$dialog.Description = '请选择规格书导出保存位置';"
         "$dialog.ShowNewFolderButton = $true;"
+        f"if ('{initial_dir}' -and (Test-Path '{initial_dir}')) {{ $dialog.SelectedPath = '{initial_dir}'; }}"
         "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {"
         "  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8;"
         "  Write-Output $dialog.SelectedPath"
@@ -498,3 +541,20 @@ def _choose_export_dir() -> Path | None:
         return None
     selected = result.stdout.strip().splitlines()
     return Path(selected[-1]) if selected else None
+
+
+def _last_output_dir() -> str:
+    try:
+        data = json.loads(EXPORT_SETTINGS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    value = data.get("last_output_dir", "")
+    return value if isinstance(value, str) else ""
+
+
+def _save_last_output_dir(path: Path) -> None:
+    EXPORT_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    EXPORT_SETTINGS_PATH.write_text(
+        json.dumps({"last_output_dir": str(path.resolve())}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
