@@ -534,8 +534,94 @@ def test_word_export_merges_content_and_group_rows_compactly(tmp_path: Path):
     for row in [*content_rows, *group_rows]:
         assert _grid_span(row) == "4"
         assert row._tr.get_or_add_trPr().find(qn("w:trHeight")) is None
+        assert len(row._tr.tc_lst) == 1
+        assert len(row.cells[0].paragraphs) == 1
         assert row.cells[0].paragraphs[0].paragraph_format.space_before.pt == 0
         assert row.cells[0].paragraphs[0].paragraph_format.space_after.pt == 0
+
+
+def test_word_export_recovers_nested_rows_from_parent_sequence(tmp_path: Path):
+    interface = ApiInterface(
+        id=1,
+        code="EQP-EAP-005",
+        name="设备任务进展信息上报",
+        direction=InterfaceDirection.EQP_TO_EAP,
+        api_name="EQP_EquipmentJobDataProcessReport",
+        caller="EQP",
+        provider="EAP",
+    )
+    parameters = [
+        ApiParameter(
+            id=1,
+            interface_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=1,
+            field_name="Ext",
+            data_type="ExtInfo",
+            description="扩展信息",
+            enum_options='{"sequence": "4.6", "parent_sequence": "4"}',
+        ),
+        ApiParameter(
+            id=2,
+            interface_id=1,
+            parent_id=1600,
+            kind=ParameterKind.REQUEST,
+            sort_order=2,
+            field_name="ExtInfo（高压测试机生产结束时上报）",
+            data_type="",
+            description="ExtInfo",
+            enum_options='{"parent_sequence": "4.6", "is_group": true}',
+        ),
+        ApiParameter(
+            id=3,
+            interface_id=1,
+            parent_id=1600,
+            kind=ParameterKind.REQUEST,
+            sort_order=3,
+            field_name="NgPanelList",
+            data_type="List<NgPanel>",
+            description="高压失败的Panel列表",
+            enum_options='{"sequence": "4.6.1", "parent_sequence": "4.6"}',
+        ),
+        ApiParameter(
+            id=4,
+            interface_id=1,
+            parent_id=1800,
+            kind=ParameterKind.REQUEST,
+            sort_order=4,
+            field_name="NgPanel",
+            data_type="",
+            description="NgPanel",
+            enum_options='{"parent_sequence": "4.6.1", "is_group": true}',
+        ),
+        ApiParameter(
+            id=5,
+            interface_id=1,
+            parent_id=1800,
+            kind=ParameterKind.REQUEST,
+            sort_order=5,
+            field_name="PanelId",
+            data_type="string",
+            description="产品序列码",
+            enum_options='{"sequence": "4.6.1.1", "parent_sequence": "4.6.1"}',
+        ),
+    ]
+    output = tmp_path / "parent_sequence.docx"
+
+    export_word_document(
+        output,
+        [interface],
+        {1: {}},
+        {1: {}},
+        parameters_by_interface={1: parameters},
+    )
+
+    document = Document(output)
+    table_text = "\n".join(cell.text for table in document.tables for row in table.rows for cell in row.cells)
+    assert "ExtInfo（高压测试机生产结束时上报）" in table_text
+    assert "NgPanelList" in table_text
+    assert "NgPanel" in table_text
+    assert "PanelId" in table_text
 
 
 def test_word_export_starts_toc_on_new_page_after_change_history(tmp_path: Path):

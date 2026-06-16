@@ -464,7 +464,13 @@ def _parameter_rows(parameters: list[ApiParameter], kind: ParameterKind) -> list
         for parameter in sorted(parameters, key=lambda item: (item.sort_order, item.id or 0))
         if parameter.kind == kind
     ]
-    top_level = [parameter for parameter in items if parameter.parent_id is None]
+    item_ids = {parameter.id for parameter in items if parameter.id is not None}
+    top_level = [
+        parameter
+        for parameter in items
+        if parameter.parent_id is None
+        or (parameter.parent_id not in item_ids and not _parameter_parent_sequence(parameter))
+    ]
     children_by_parent = _children_by_parent(items)
     for index, parameter in enumerate(top_level, start=1):
         rows.extend(_parameter_tree_rows(parameter, f"4.{index}", children_by_parent))
@@ -486,10 +492,21 @@ def _is_merged_marker_row(row: list[str]) -> bool:
 
 def _children_by_parent(parameters: list[ApiParameter]) -> dict[int, list[ApiParameter]]:
     children: dict[int, list[ApiParameter]] = {}
+    by_sequence = {
+        sequence: parameter
+        for parameter in parameters
+        if (sequence := _parameter_sequence(parameter))
+    }
+    item_ids = {parameter.id for parameter in parameters if parameter.id is not None}
     for parameter in parameters:
-        if parameter.parent_id is None:
+        parent_id = parameter.parent_id if parameter.parent_id in item_ids else None
+        parent_sequence = _parameter_parent_sequence(parameter)
+        if parent_id is None and parent_sequence:
+            parent = by_sequence.get(parent_sequence)
+            parent_id = parent.id if parent and parent.id is not None else None
+        if parent_id is None:
             continue
-        children.setdefault(parameter.parent_id, []).append(parameter)
+        children.setdefault(parent_id, []).append(parameter)
     for items in children.values():
         items.sort(key=lambda item: (item.sort_order, item.id or 0))
     return children
@@ -544,10 +561,13 @@ def _replace_rows_from(table: Table, start_index: int, rows: list[tuple[str, lis
     for row_kind, row_values in rows:
         new_row = copy.deepcopy(templates[row_kind])
         table._tbl.append(new_row)
-        _set_row(table, len(table.rows) - 1, row_values)
+        current_row = table.rows[-1]
         if row_kind == "merged":
-            _merge_row_cells(table.rows[-1])
-            _compact_row(table.rows[-1])
+            _merge_row_cells(current_row)
+            _set_merged_row_text(current_row, row_values[0] if row_values else "")
+            _compact_row(current_row)
+        else:
+            _set_row(table, len(table.rows) - 1, row_values)
 
 
 def _ensure_table_rows(table: Table, count: int) -> None:
@@ -568,6 +588,15 @@ def _merge_row_cells(row) -> None:
     first = row.cells[0]
     for cell in row.cells[1:]:
         first = first.merge(cell)
+
+
+def _set_merged_row_text(row, text: str) -> None:
+    if not row.cells:
+        return
+    cell = row.cells[0]
+    _set_cell_text(cell, text)
+    for paragraph in cell.paragraphs[1:]:
+        paragraph._element.getparent().remove(paragraph._element)
 
 
 def _compact_row(row) -> None:
@@ -626,6 +655,12 @@ def _parameter_metadata(parameter: ApiParameter) -> dict:
     except json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _parameter_parent_sequence(parameter: ApiParameter) -> str:
+    metadata = _parameter_metadata(parameter)
+    parent_sequence = metadata.get("parent_sequence")
+    return parent_sequence if isinstance(parent_sequence, str) else ""
 
 
 def _is_group_parameter(parameter: ApiParameter) -> bool:
