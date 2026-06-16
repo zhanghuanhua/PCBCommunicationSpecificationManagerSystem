@@ -5,10 +5,12 @@ from datetime import datetime
 from pathlib import Path
 
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
+from docx.shared import Pt
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 
@@ -216,6 +218,18 @@ def _append_change_history(
     for index, value in enumerate(row_values):
         if index < len(row.cells):
             _set_cell_text(row.cells[index], value)
+    _format_change_history_row(row)
+
+
+def _format_change_history_row(row) -> None:
+    for index, cell in enumerate(row.cells):
+        alignment = WD_ALIGN_PARAGRAPH.LEFT if index == 3 else WD_ALIGN_PARAGRAPH.CENTER
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = alignment
+            for run in paragraph.runs:
+                run.font.name = "微软雅黑"
+                run._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
+                run.font.size = Pt(8)
 
 
 def _find_change_history_table(document: Document) -> Table | None:
@@ -574,10 +588,7 @@ def _format_request_log(interface: ApiInterface, request_example: dict) -> str:
 
 
 def _format_parameter_description(parameter: ApiParameter) -> str:
-    suffix = "（必填）" if parameter.required else "（非必填）"
-    if parameter.is_array:
-        suffix = f"{suffix}（数组）"
-    return f"{parameter.description}{suffix}" if parameter.description else suffix
+    return parameter.description
 
 
 def _parameter_sequence(parameter: ApiParameter) -> str:

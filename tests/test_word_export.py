@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime
 
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt
@@ -141,6 +142,17 @@ def test_word_export_appends_change_history_row(tmp_path: Path):
         "4.2",
         "修正接口参数层级并更新导出内容。",
     ]
+    last_row = document.tables[0].rows[-1]
+    assert [cell.paragraphs[0].alignment for cell in last_row.cells[:4]] == [
+        WD_ALIGN_PARAGRAPH.CENTER,
+        WD_ALIGN_PARAGRAPH.CENTER,
+        WD_ALIGN_PARAGRAPH.CENTER,
+        WD_ALIGN_PARAGRAPH.LEFT,
+    ]
+    for cell in last_row.cells[:4]:
+        run = cell.paragraphs[0].runs[0]
+        assert run.font.name == "微软雅黑"
+        assert run.font.size.pt == 8
 
 
 def test_word_export_replaces_old_interface_section_headings(tmp_path: Path):
@@ -275,9 +287,10 @@ def test_word_export_includes_formal_parameter_tables_and_saved_log_examples(tmp
     assert "字段" in table_text
     assert "IP" in table_text
     assert "string" in table_text
-    assert "必填" in table_text
-    assert "非必填" in table_text
-    assert "数组" in table_text
+    assert "IP地址（必填）" not in table_text
+    assert "处理结果（非必填）（数组）" not in table_text
+    assert "IP地址" in table_text
+    assert "处理结果" in table_text
     assert "IP地址" in table_text
     assert "Result" in table_text
     assert "bool" in table_text
