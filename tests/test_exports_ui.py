@@ -24,6 +24,8 @@ def test_export_center_page_shows_format_and_watermark_options():
     assert "导出中心" in response.text
     assert "Word + PDF" in response.text
     assert "添加水印" in response.text
+    assert "修改人姓名" in response.text
+    assert "修改内容" in response.text
     assert "window.setTimeout" in response.text
     assert "选择保存位置超时" in response.text
 
@@ -170,6 +172,49 @@ def test_word_pdf_export_reports_pdf_failure(tmp_path, monkeypatch):
     assert response.status_code == 200
     assert "PDF conversion failed" in response.text
     assert "导出成功" not in response.text
+
+
+def test_export_center_passes_change_history_fields(tmp_path, monkeypatch):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.2")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    captured = {}
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    def fake_word_export(output_path, *args, **kwargs):
+        captured.update(kwargs)
+        Path(output_path).write_text("word ok", encoding="utf-8")
+
+    app.dependency_overrides[get_session] = override_session
+    monkeypatch.setattr(exports_router, "export_word_document", fake_word_export)
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={
+                "export_format": "word",
+                "spec_version_id": str(spec_version_id),
+                "target_version": "4.2",
+                "change_author": "张涣化",
+                "change_description": "修正接口参数层级并更新导出内容。",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert captured["change_author"] == "张涣化"
+    assert captured["change_description"] == "修正接口参数层级并更新导出内容。"
 
 
 def test_export_download_returns_generated_file():

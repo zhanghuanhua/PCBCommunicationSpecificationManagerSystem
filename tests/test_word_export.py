@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime
 
 from docx import Document
 from docx.oxml import OxmlElement
@@ -95,6 +96,51 @@ def test_word_export_preserves_template_preface_and_replaces_old_interfaces(tmp_
     assert "OLD_API" not in table_text
     assert "OLD_LOG" not in table_text
     assert "旧接口后面的正文也需要替换" not in body_text
+
+
+def test_word_export_appends_change_history_row(tmp_path: Path):
+    template_path = tmp_path / "template.docx"
+    template = Document()
+    change_table = template.add_table(rows=1, cols=4)
+    _set_test_row(change_table, 0, "日期", "作者", "版本号", "变更内容")
+    template.add_paragraph("三、 接口内容")
+    template.add_paragraph("EQP-EAP-001 旧接口")
+    old_table = template.add_table(rows=0, cols=4)
+    _add_test_row(old_table, "需求说明", "旧", "旧", "旧")
+    _add_test_row(old_table, "接口名称", "OLD_API", "OLD_API", "OLD_API")
+    old_log = template.add_table(rows=0, cols=3)
+    _add_test_row(old_log, "日志范例", "请求", "OLD_LOG")
+    template.save(template_path)
+    interface = ApiInterface(
+        id=1,
+        code="EQP-EAP-001",
+        name="连线检查",
+        direction=InterfaceDirection.EQP_TO_EAP,
+        api_name="EQP_AliveCheck",
+        caller="EQP",
+        provider="EAP",
+    )
+    output = tmp_path / "change_history.docx"
+
+    export_word_document(
+        output,
+        [interface],
+        {1: {}},
+        {1: {}},
+        template_path=template_path,
+        document_version="4.2",
+        change_author="张涣化",
+        change_description="修正接口参数层级并更新导出内容。",
+    )
+
+    document = Document(output)
+    rows = [[cell.text for cell in row.cells] for row in document.tables[0].rows]
+    assert rows[-1] == [
+        datetime.now().strftime("%Y-%m-%d"),
+        "张涣化",
+        "4.2",
+        "修正接口参数层级并更新导出内容。",
+    ]
 
 
 def test_word_export_replaces_old_interface_section_headings(tmp_path: Path):

@@ -1,6 +1,7 @@
 import copy
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from docx import Document
@@ -28,6 +29,8 @@ def export_word_document(
     template_path: Path | None = None,
     parameters_by_interface: dict[int, list[ApiParameter]] | None = None,
     document_version: str | None = None,
+    change_author: str = "",
+    change_description: str = "",
 ) -> Path:
     document = Document(template_path) if template_path else Document()
     add_text_watermark(document, watermark_text)
@@ -36,6 +39,7 @@ def export_word_document(
 
     if template_path:
         _replace_all_version_text(document, version)
+        _append_change_history(document, version, change_author, change_description)
         _remove_existing_interface_content(document)
         _ensure_toc_starts_on_new_page(document)
     else:
@@ -180,6 +184,53 @@ def _iter_document_blocks(document: Document):
             yield Paragraph(child, document)
         elif isinstance(child, CT_Tbl):
             yield Table(child, document)
+
+
+def _append_change_history(
+    document: Document,
+    version: str,
+    author: str,
+    description: str,
+) -> None:
+    author = author.strip()
+    description = description.strip()
+    if not author or not description:
+        return
+    table = _find_change_history_table(document)
+    if table is None:
+        return
+    today = datetime.now().strftime("%Y-%m-%d")
+    existing = {
+        (
+            _cell_text(row.cells[0]) if len(row.cells) > 0 else "",
+            _cell_text(row.cells[1]) if len(row.cells) > 1 else "",
+            _cell_text(row.cells[2]) if len(row.cells) > 2 else "",
+            _cell_text(row.cells[3]) if len(row.cells) > 3 else "",
+        )
+        for row in table.rows
+    }
+    row_values = (today, author, version, description)
+    if row_values in existing:
+        return
+    row = table.add_row()
+    for index, value in enumerate(row_values):
+        if index < len(row.cells):
+            _set_cell_text(row.cells[index], value)
+
+
+def _find_change_history_table(document: Document) -> Table | None:
+    for table in document.tables:
+        if len(table.columns) < 4 or not table.rows:
+            continue
+        first_row_text = [_cell_text(cell) for cell in table.rows[0].cells[:4]]
+        compact = "".join(first_row_text).replace(" ", "")
+        if "日期" in compact and "作者" in compact and "版本号" in compact and "变更内容" in compact:
+            return table
+    return None
+
+
+def _cell_text(cell) -> str:
+    return cell.text.strip()
 
 
 def _remove_existing_interface_content(document: Document) -> None:

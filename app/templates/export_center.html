@@ -42,6 +42,16 @@
     <small class="muted">和当前版本相同则更新当前版本；填写 4.1 这类新版本号会复制当前接口并保存为新版本。</small>
   </label>
   <label>
+    修改人姓名
+    <input name="change_author" placeholder="请输入本次修改人姓名" required>
+    <small class="muted">导出 Word/PDF 时会写入文档变更记录。</small>
+  </label>
+  <label>
+    修改内容
+    <textarea name="change_description" rows="3" placeholder="留空则系统按本次导出内容自动生成说明"></textarea>
+    <small class="muted">例如：修正接口参数层级、更新示例、调整导出版式。</small>
+  </label>
+  <label>
     保存位置
     <input name="output_dir" placeholder="留空则点击导出后选择保存文件夹">
     <small class="muted">导出时会弹出文件夹选择窗口，文件将直接保存到你选择的位置。</small>

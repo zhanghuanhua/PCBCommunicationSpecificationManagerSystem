@@ -44,6 +44,8 @@ def run_export(
     export_format: str = Form(...),
     spec_version_id: int | None = Form(None),
     target_version: str = Form(""),
+    change_author: str = Form(""),
+    change_description: str = Form(""),
     watermark_enabled: bool = Form(False),
     watermark_text: str = Form(""),
     output_dir: str = Form(""),
@@ -93,6 +95,8 @@ def run_export(
             },
         )
     export_version = target_version.strip() or spec_version.version
+    change_author = change_author.strip()
+    change_description = change_description.strip() or _default_change_description(export_format)
     export_name = f"EAP-EQP接口通讯规格书_v{export_version}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     template = _template_for_spec(spec_version, session)
     template_path = Path(template.stored_path) if template else None
@@ -117,6 +121,8 @@ def run_export(
             template_path=template_path,
             parameters_by_interface=parameters_by_interface,
             document_version=export_version,
+            change_author=change_author,
+            change_description=change_description,
         )
         if export_format in {"word", "word_pdf", "all"}:
             output_files.append(str(word_path))
@@ -191,6 +197,16 @@ def _template_for_spec(spec_version: SpecVersion, session: Session) -> SpecTempl
         if template:
             return template
     return session.exec(select(SpecTemplate).order_by(SpecTemplate.created_at.desc())).first()
+
+
+def _default_change_description(export_format: str) -> str:
+    if export_format in {"word_pdf", "all"}:
+        return "更新接口内容并导出 Word/PDF 文档。"
+    if export_format == "word":
+        return "更新接口内容并导出 Word 文档。"
+    if export_format == "pdf":
+        return "更新接口内容并导出 PDF 文档。"
+    return "更新接口内容并导出审阅文档。"
 
 
 def _save_exported_spec_version(
