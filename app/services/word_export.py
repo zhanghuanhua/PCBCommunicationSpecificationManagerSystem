@@ -442,7 +442,7 @@ def _fill_interface_table(table: Table, interface: ApiInterface, parameters: lis
         ("detail", ["3", "DateTime", "DateTime", "系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）"]),
         ("detail", ["4", "Content", "object", "参数内容" if request_rows else "空"]),
         ("detail", ["5", "RequestId", "string", "请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）"]),
-        ("detail", ["Content", "Content", "Content", "Content"]),
+        ("merged", ["Content", "", "", ""]),
         *_typed_parameter_rows(request_rows),
         ("section", ["返回值列表", "返回值列表", "返回值列表", "返回值列表"]),
         ("header", ["序号", "字段", "类型", "描述"]),
@@ -474,9 +474,14 @@ def _parameter_rows(parameters: list[ApiParameter], kind: ParameterKind) -> list
 def _typed_parameter_rows(parameter_rows: list[list[str]]) -> list[tuple[str, list[str]]]:
     typed_rows = []
     for row in parameter_rows:
-        row_kind = "group" if len(set(value for value in row if value)) == 1 else "detail"
+        row_kind = "merged" if _is_merged_marker_row(row) else "detail"
         typed_rows.append((row_kind, row))
     return typed_rows
+
+
+def _is_merged_marker_row(row: list[str]) -> bool:
+    non_empty = [value for value in row if value]
+    return len(non_empty) == 1 or len(set(non_empty)) == 1
 
 
 def _children_by_parent(parameters: list[ApiParameter]) -> dict[int, list[ApiParameter]]:
@@ -532,7 +537,7 @@ def _replace_rows_from(table: Table, start_index: int, rows: list[tuple[str, lis
         "section": section_template,
         "header": header_template,
         "detail": detail_template,
-        "group": detail_template,
+        "merged": detail_template,
     }
     while len(table.rows) > start_index:
         table._tbl.remove(table.rows[-1]._tr)
@@ -540,8 +545,9 @@ def _replace_rows_from(table: Table, start_index: int, rows: list[tuple[str, lis
         new_row = copy.deepcopy(templates[row_kind])
         table._tbl.append(new_row)
         _set_row(table, len(table.rows) - 1, row_values)
-        if row_kind == "group":
+        if row_kind == "merged":
             _merge_row_cells(table.rows[-1])
+            _compact_row(table.rows[-1])
 
 
 def _ensure_table_rows(table: Table, count: int) -> None:
@@ -562,6 +568,21 @@ def _merge_row_cells(row) -> None:
     first = row.cells[0]
     for cell in row.cells[1:]:
         first = first.merge(cell)
+
+
+def _compact_row(row) -> None:
+    tr_pr = row._tr.get_or_add_trPr()
+    for height in list(tr_pr.findall(qn("w:trHeight"))):
+        tr_pr.remove(height)
+    seen_cells = set()
+    for cell in row.cells:
+        if id(cell._tc) in seen_cells:
+            continue
+        seen_cells.add(id(cell._tc))
+        for paragraph in cell.paragraphs:
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1
 
 
 def _set_cell_text(cell, text: str) -> None:

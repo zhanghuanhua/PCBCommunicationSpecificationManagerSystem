@@ -217,6 +217,166 @@ def test_export_center_passes_change_history_fields(tmp_path, monkeypatch):
     assert captured["change_description"] == "修正接口参数层级并更新导出内容。"
 
 
+def test_export_center_builds_change_history_from_added_interfaces(tmp_path, monkeypatch):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        source = SpecVersion(version="4.1")
+        target = SpecVersion(version="4.2", source_version_id=1)
+        session.add(source)
+        session.add(target)
+        session.commit()
+        session.refresh(source)
+        session.refresh(target)
+        target.source_version_id = source.id
+        session.add(
+            ApiInterface(
+                spec_version_id=source.id,
+                code="EQP-EAP-037",
+                name="热熔机叠板结果上传",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_HotPressReport",
+                caller="EQP",
+                provider="EAP",
+            )
+        )
+        session.add(
+            ApiInterface(
+                spec_version_id=target.id,
+                code="EQP-EAP-037",
+                name="热熔机叠板结果上传",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_HotPressReport",
+                caller="EQP",
+                provider="EAP",
+            )
+        )
+        session.add(
+            ApiInterface(
+                spec_version_id=target.id,
+                code="EQP-EAP-038",
+                name="其他打码数据上报",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_OtherCodeData",
+                caller="EQP",
+                provider="EAP",
+            )
+        )
+        session.commit()
+        spec_version_id = target.id
+
+    captured = {}
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    def fake_word_export(output_path, *args, **kwargs):
+        captured.update(kwargs)
+        Path(output_path).write_text("word ok", encoding="utf-8")
+
+    app.dependency_overrides[get_session] = override_session
+    monkeypatch.setattr(exports_router, "export_word_document", fake_word_export)
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={
+                "export_format": "word",
+                "spec_version_id": str(spec_version_id),
+                "target_version": "4.2",
+                "change_author": "张涣化",
+                "change_description": "用户填写内容",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert captured["change_description"] == "1. 新增EQP-EAP-038 其他打码数据上报"
+
+
+def test_export_center_builds_change_history_from_template_missing_interface(tmp_path, monkeypatch):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    template_path = tmp_path / "template.docx"
+    template = Document()
+    template.add_paragraph("EQP-EAP-037 热熔机叠板结果上传")
+    template.save(template_path)
+
+    with Session(engine) as session:
+        spec_version = SpecVersion(
+            version="4.2",
+            template_path=str(template_path),
+        )
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+        session.add(
+            SpecTemplate(
+                original_filename="template.docx",
+                stored_path=str(template_path),
+                file_size=template_path.stat().st_size,
+            )
+        )
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EQP-EAP-037",
+                name="热熔机叠板结果上传",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_HotPressReport",
+                caller="EQP",
+                provider="EAP",
+            )
+        )
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EQP-EAP-038",
+                name="其他打码数据上报",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_OtherCodeData",
+                caller="EQP",
+                provider="EAP",
+            )
+        )
+        session.commit()
+
+    captured = {}
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    def fake_word_export(output_path, *args, **kwargs):
+        captured.update(kwargs)
+        Path(output_path).write_text("word ok", encoding="utf-8")
+
+    app.dependency_overrides[get_session] = override_session
+    monkeypatch.setattr(exports_router, "export_word_document", fake_word_export)
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={
+                "export_format": "word",
+                "spec_version_id": str(spec_version_id),
+                "target_version": "4.2",
+                "change_author": "张涣化",
+                "change_description": "用户填写内容",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert captured["change_description"] == "1. 新增EQP-EAP-038 其他打码数据上报"
+
+
 def test_export_download_returns_generated_file():
     client = TestClient(app)
     export_dir = Path("exports")

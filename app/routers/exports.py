@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 from pathlib import Path
+import re
 import subprocess
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -95,11 +96,16 @@ def run_export(
             },
         )
     export_version = target_version.strip() or spec_version.version
-    change_author = change_author.strip()
-    change_description = change_description.strip() or _default_change_description(export_format)
-    export_name = f"EAP-EQP接口通讯规格书_v{export_version}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     template = _template_for_spec(spec_version, session)
     template_path = Path(template.stored_path) if template else None
+    change_author = change_author.strip()
+    manual_change_description = change_description.strip()
+    change_description = (
+        _build_change_history_description(session, spec_version, template_path)
+        or manual_change_description
+        or _default_change_description(export_format)
+    )
+    export_name = f"EAP-EQP接口通讯规格书_v{export_version}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
 
     if export_format in {"markdown", "all"}:
         markdown_path = export_dir / f"{export_name}.md"
@@ -207,6 +213,100 @@ def _default_change_description(export_format: str) -> str:
     if export_format == "pdf":
         return "更新接口内容并导出 PDF 文档。"
     return "更新接口内容并导出审阅文档。"
+
+
+def _build_change_history_description(
+    session: Session,
+    spec_version: SpecVersion,
+    template_path: Path | None = None,
+) -> str:
+    current_interfaces = session.exec(
+        select(ApiInterface).where(ApiInterface.spec_version_id == spec_version.id)
+    ).all()
+    current_by_code = {item.code: item for item in current_interfaces}
+    changes: list[str] = []
+
+    source = session.get(SpecVersion, spec_version.source_version_id) if spec_version.source_version_id else None
+    if source:
+        source_interfaces = session.exec(
+            select(ApiInterface).where(ApiInterface.spec_version_id == source.id)
+        ).all()
+        source_by_code = {item.code: item for item in source_interfaces}
+        for code in sorted(set(current_by_code) - set(source_by_code)):
+            item = current_by_code[code]
+            changes.append(f"新增{item.code} {item.name}")
+        for code in sorted(set(source_by_code) - set(current_by_code)):
+            item = source_by_code[code]
+            changes.append(f"删除{item.code} {item.name}")
+        for code in sorted(set(current_by_code) & set(source_by_code)):
+            current = current_by_code[code]
+            source_item = source_by_code[code]
+            if _interface_changed(current, source_item):
+                changes.append(f"更新{current.code} {current.name}")
+
+    for item in _template_missing_new_interfaces(current_interfaces, template_path):
+        change = f"新增{item.code} {item.name}"
+        if change not in changes:
+            changes.append(change)
+    return "\n".join(f"{index}. {change}" for index, change in enumerate(changes, start=1))
+
+
+def _template_missing_new_interfaces(
+    current_interfaces: list[ApiInterface],
+    template_path: Path | None,
+) -> list[ApiInterface]:
+    if not template_path or not template_path.exists():
+        return []
+    template_text = _template_document_text(template_path)
+    if not template_text:
+        return []
+    max_numbers: dict[str, int] = {}
+    for prefix, number in re.findall(r"\b((?:EQP-EAP|EAP-EQP)-)(\d{3})\b", template_text, flags=re.IGNORECASE):
+        max_numbers[prefix.upper()] = max(max_numbers.get(prefix.upper(), 0), int(number))
+    missing = []
+    for item in current_interfaces:
+        match = re.match(r"((?:EQP-EAP|EAP-EQP)-)(\d{3})$", item.code, flags=re.IGNORECASE)
+        if not match:
+            continue
+        prefix = match.group(1).upper()
+        number = int(match.group(2))
+        if item.code not in template_text and number > max_numbers.get(prefix, 0):
+            missing.append(item)
+    return sorted(missing, key=lambda item: item.code)
+
+
+def _template_document_text(template_path: Path) -> str:
+    try:
+        from docx import Document
+
+        document = Document(template_path)
+    except Exception:
+        return ""
+    paragraph_text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    table_text = "\n".join(
+        cell.text
+        for table in document.tables
+        for row in table.rows
+        for cell in row.cells
+    )
+    return f"{paragraph_text}\n{table_text}"
+
+
+def _interface_changed(current: ApiInterface, source: ApiInterface) -> bool:
+    return any(
+        getattr(current, field) != getattr(source, field)
+        for field in [
+            "name",
+            "api_name",
+            "caller",
+            "provider",
+            "requirement",
+            "scenario",
+            "service_description",
+            "request_log_example",
+            "response_log_example",
+        ]
+    )
 
 
 def _save_exported_spec_version(

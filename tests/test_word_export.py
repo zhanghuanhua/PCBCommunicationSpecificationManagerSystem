@@ -481,6 +481,63 @@ def test_word_export_preserves_nested_parameter_sequences(tmp_path: Path):
     assert "PanelId" in table_text
 
 
+def test_word_export_merges_content_and_group_rows_compactly(tmp_path: Path):
+    interface = ApiInterface(
+        id=1,
+        code="EQP-EAP-005",
+        name="设备任务进展信息上报",
+        direction=InterfaceDirection.EQP_TO_EAP,
+        api_name="EQP_EquipmentJobDataProcessReport",
+        caller="EQP",
+        provider="EAP",
+    )
+    parameters = [
+        ApiParameter(
+            id=1,
+            interface_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=1,
+            field_name="ProcessData",
+            data_type="",
+            description="ProcessData",
+            enum_options='{"is_group": true}',
+        ),
+        ApiParameter(
+            id=2,
+            interface_id=1,
+            parent_id=1,
+            kind=ParameterKind.REQUEST,
+            sort_order=2,
+            field_name="PanelId",
+            data_type="string",
+            description="产品序列码",
+            enum_options='{"sequence": "4.1"}',
+        ),
+    ]
+    output = tmp_path / "merged_rows.docx"
+
+    export_word_document(
+        output,
+        [interface],
+        {1: {}},
+        {1: {}},
+        parameters_by_interface={1: parameters},
+    )
+
+    document = Document(output)
+    table = next(table for table in document.tables if len(table.columns) == 4)
+    content_rows = [row for row in table.rows if row.cells[0].text.strip() == "Content"]
+    group_rows = [row for row in table.rows if row.cells[0].text.strip() == "ProcessData"]
+
+    assert content_rows
+    assert group_rows
+    for row in [*content_rows, *group_rows]:
+        assert _grid_span(row) == "4"
+        assert row._tr.get_or_add_trPr().find(qn("w:trHeight")) is None
+        assert row.cells[0].paragraphs[0].paragraph_format.space_before.pt == 0
+        assert row.cells[0].paragraphs[0].paragraph_format.space_after.pt == 0
+
+
 def test_word_export_starts_toc_on_new_page_after_change_history(tmp_path: Path):
     template_path = tmp_path / "template.docx"
     template = Document()
@@ -596,6 +653,11 @@ def _cell_fill(cell) -> str:
     tc_pr = cell._tc.tcPr
     shading = tc_pr.find(qn("w:shd")) if tc_pr is not None else None
     return shading.get(qn("w:fill")) if shading is not None else ""
+
+
+def _grid_span(row) -> str:
+    grid_span = row._tr.tc_lst[0].tcPr.find(qn("w:gridSpan"))
+    return grid_span.get(qn("w:val")) if grid_span is not None else ""
 
 
 def _insert_toc_sdt_after_first_table(document: Document, title: str) -> None:
