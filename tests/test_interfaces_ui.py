@@ -491,6 +491,9 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "响应日志范例" in response.text
     assert "新增参数" in response.text
     assert "添加参数" in response.text
+    assert "保存接口信息" in response.text
+    assert 'name="code"' in response.text
+    assert 'name="api_name"' in response.text
     assert "点击添加请求或响应字段" not in response.text
     assert "interface-detail-layout" in response.text
     assert "interface-detail-container" in response.text
@@ -505,6 +508,36 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "parameter-grid" not in response.text
     assert "detail-side-panel" not in response.text
     assert "示例值</th>" not in response.text
+
+
+def test_update_interface_info_from_detail_page(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}",
+            data={
+                "code": "EAP-EQP-038",
+                "name": "其他打码数据上报",
+                "api_name": "EAP_OtherCodeData",
+                "caller": "EAP",
+                "provider": "EQP",
+                "version": "4.3",
+                "requirement": "更新后的需求说明",
+                "scenario": "更新后的使用场景",
+                "service_description": "更新后的接口服务描述",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "EAP-EQP-038" in response.text
+    assert "其他打码数据上报" in response.text
+    assert "EAP_OtherCodeData" in response.text
+    assert "4.3" in response.text
+    assert "更新后的需求说明" in response.text
+    assert "EQP_StatusReport" not in response.text
 
 
 def test_add_parameter_to_interface_detail_page(tmp_path):

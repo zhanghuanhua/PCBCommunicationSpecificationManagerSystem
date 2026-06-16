@@ -149,6 +149,42 @@ def interface_detail(
     )
 
 
+@router.post("/{interface_id}")
+def update_interface(
+    interface_id: int,
+    code: str = Form(...),
+    name: str = Form(...),
+    api_name: str = Form(...),
+    caller: str = Form(...),
+    provider: str = Form(...),
+    version: str = Form(""),
+    requirement: str = Form(""),
+    scenario: str = Form(""),
+    service_description: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    interface = session.get(ApiInterface, interface_id)
+    if not interface:
+        raise HTTPException(status_code=404, detail="接口不存在")
+    interface.code = code.strip()
+    interface.name = name.strip()
+    interface.api_name = api_name.strip()
+    interface.caller = caller.strip()
+    interface.provider = provider.strip()
+    interface.version = version.strip() or interface.version
+    interface.requirement = requirement
+    interface.scenario = scenario
+    interface.service_description = service_description
+    interface.direction = _direction_from_parties(interface.caller, interface.provider, interface.direction)
+    interface.updated_at = datetime.now(UTC)
+    interface.status = InterfaceStatus.DRAFT
+    session.add(interface)
+    session.commit()
+    _sync_log_example(interface_id, ParameterKind.REQUEST, session)
+    _sync_log_example(interface_id, ParameterKind.RESPONSE, session)
+    return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
+
+
 @router.post("/{interface_id}/parameters")
 def add_parameter(
     interface_id: int,
@@ -256,6 +292,20 @@ def _resolve_data_type(data_type: str, data_type_choice: str, custom_data_type: 
             raise HTTPException(status_code=400, detail="选择自定义时必须填写自定义类型")
         return custom_type
     return (data_type_choice or data_type).strip()
+
+
+def _direction_from_parties(
+    caller: str,
+    provider: str,
+    fallback: InterfaceDirection,
+) -> InterfaceDirection:
+    caller = caller.upper()
+    provider = provider.upper()
+    if caller == "EQP" and provider == "EAP":
+        return InterfaceDirection.EQP_TO_EAP
+    if caller == "EAP" and provider == "EQP":
+        return InterfaceDirection.EAP_TO_EQP
+    return fallback
 
 
 def _add_parameters_from_new_form(

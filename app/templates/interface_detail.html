@@ -75,24 +75,56 @@
       </form>
     </details>
 
-    <div class="table-wrap">
+    <form class="form-panel" method="post" action="/interfaces/{{ interface.id }}">
       <div class="section-heading">
         <div>
           <h2>接口信息</h2>
-          <p>维护接口基础说明和调用关系。</p>
+          <p>维护接口基础说明和调用关系，保存后会用于后续导出。</p>
         </div>
       </div>
-      <table>
-        <tbody>
-          <tr><th>接口编号</th><td>{{ interface.code }}</td></tr>
-          <tr><th>接口名称</th><td>{{ interface.name }}</td></tr>
-          <tr><th>调用方</th><td>{{ interface.caller }}</td></tr>
-          <tr><th>提供方</th><td>{{ interface.provider }}</td></tr>
-          <tr><th>版本</th><td>{{ interface.version }}</td></tr>
-          <tr><th>状态</th><td><span class="status-badge">{{ "草稿" if interface.status == "DRAFT" else interface.status }}</span></td></tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="parameter-add-grid">
+        <label>
+          接口编号
+          <input name="code" value="{{ interface.code }}" required>
+        </label>
+        <label>
+          接口名称
+          <input name="name" value="{{ interface.name }}" required>
+        </label>
+        <label>
+          API 名称
+          <input name="api_name" value="{{ interface.api_name }}" required>
+        </label>
+        <label>
+          调用方
+          <input name="caller" value="{{ interface.caller }}" required>
+        </label>
+        <label>
+          提供方
+          <input name="provider" value="{{ interface.provider }}" required>
+        </label>
+        <label>
+          版本
+          <input name="version" value="{{ interface.version }}">
+        </label>
+        <label class="wide-field">
+          需求说明
+          <textarea name="requirement">{{ interface.requirement }}</textarea>
+        </label>
+        <label class="wide-field">
+          使用场景
+          <textarea name="scenario">{{ interface.scenario }}</textarea>
+        </label>
+        <label class="wide-field">
+          接口服务描述
+          <textarea name="service_description">{{ interface.service_description }}</textarea>
+        </label>
+      </div>
+      <p><span class="status-badge">{{ "草稿" if interface.status == "DRAFT" else interface.status }}</span></p>
+      <div class="actions">
+        <button type="submit">保存接口信息</button>
+      </div>
+    </form>
 
     <div class="table-wrap">
       <div class="section-heading">
