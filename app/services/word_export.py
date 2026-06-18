@@ -89,12 +89,14 @@ class _InterfaceTemplates:
         title: CT_P | None,
         main_table: CT_Tbl | None,
         log_table: CT_Tbl | None,
+        row_shapes_by_api: dict[str, dict[str, str]] | None = None,
     ) -> None:
         self.heading = heading
         self.direction_heading = direction_heading
         self.title = title
         self.main_table = main_table
         self.log_table = log_table
+        self.row_shapes_by_api = row_shapes_by_api or {}
 
 
 def _append_direction(
@@ -114,7 +116,7 @@ def _append_direction(
         item.version = document_version
         _add_template_like_paragraph(document, templates.title, f"{item.code} {item.name}")
         main_table = _append_template_table(document, templates.main_table, 4)
-        _fill_interface_table(main_table, item, parameters_by_interface.get(key, []))
+        _fill_interface_table(main_table, item, parameters_by_interface.get(key, []), templates)
         document.add_paragraph("")
         log_table = _append_template_table(document, templates.log_table, 3)
         _fill_log_table(log_table, item, request_examples.get(key, {}), response_examples.get(key, {}))
@@ -177,7 +179,14 @@ def _find_interface_templates(document: Document) -> _InterfaceTemplates:
             log_table = block._tbl
             break
 
-    return _InterfaceTemplates(heading, direction_heading, title, main_table, log_table)
+    return _InterfaceTemplates(
+        heading,
+        direction_heading,
+        title,
+        main_table,
+        log_table,
+        _interface_row_shapes(document),
+    )
 
 
 def _iter_document_blocks(document: Document):
@@ -186,6 +195,52 @@ def _iter_document_blocks(document: Document):
             yield Paragraph(child, document)
         elif isinstance(child, CT_Tbl):
             yield Table(child, document)
+
+
+def _interface_row_shapes(document: Document) -> dict[str, dict[str, str]]:
+    shapes: dict[str, dict[str, str]] = {}
+    for table in document.tables:
+        if not _is_interface_table(table):
+            continue
+        api_name = _interface_api_name(table)
+        if not api_name:
+            continue
+        table_shapes: dict[str, str] = {}
+        in_response_section = False
+        for row in table.rows:
+            raw_cells = [_raw_cell_text(tc) for tc in row._tr.tc_lst]
+            if not raw_cells:
+                continue
+            if raw_cells[0] == "返回值列表":
+                in_response_section = True
+                table_shapes["__response_content__"] = "absent"
+                continue
+            if len(raw_cells) == 1 and raw_cells[0]:
+                table_shapes[raw_cells[0]] = "merged"
+            elif len(raw_cells) >= 4:
+                if in_response_section and raw_cells[1] == "Content":
+                    table_shapes["__response_content__"] = "present"
+                key = raw_cells[1] or raw_cells[0]
+                if key:
+                    table_shapes[key] = "detail"
+        shapes[api_name] = table_shapes
+    return shapes
+
+
+def _interface_api_name(table: Table) -> str:
+    for row in table.rows:
+        cells = [_cell_text(cell) for cell in row.cells]
+        if cells and cells[0] == "接口名称" and len(cells) > 1:
+            return cells[1].strip()
+    return ""
+
+
+def _raw_cell_text(cell_element) -> str:
+    return "\n".join(
+        node.text or ""
+        for node in cell_element.iter()
+        if node.tag.endswith("t")
+    ).strip()
 
 
 def _append_change_history(
@@ -424,7 +479,12 @@ def _append_template_table(document: Document, template: CT_Tbl | None, cols: in
     return Table(element, document)
 
 
-def _fill_interface_table(table: Table, interface: ApiInterface, parameters: list[ApiParameter]) -> None:
+def _fill_interface_table(
+    table: Table,
+    interface: ApiInterface,
+    parameters: list[ApiParameter],
+    templates: _InterfaceTemplates | None = None,
+) -> None:
     _ensure_table_rows(table, 13)
     _set_row(table, 0, ["需求说明", interface.requirement, interface.requirement, interface.requirement])
     _set_row(table, 1, ["使用场景", interface.scenario, interface.scenario, interface.scenario])
@@ -432,8 +492,10 @@ def _fill_interface_table(table: Table, interface: ApiInterface, parameters: lis
     _set_row(table, 3, ["接口方式", "接口调用方", "接口提供方", "接口服务描述"])
     _set_row(table, 4, ["Web API", interface.caller, interface.provider, interface.service_description])
 
-    request_rows = _parameter_rows(parameters, ParameterKind.REQUEST)
-    response_rows = _parameter_rows(parameters, ParameterKind.RESPONSE)
+    template_shapes = (templates.row_shapes_by_api if templates else {}).get(interface.api_name.strip(), {})
+    include_response_content = _template_has_response_content(template_shapes)
+    request_rows = _parameter_rows(parameters, ParameterKind.REQUEST, template_shapes)
+    response_rows = _parameter_rows(parameters, ParameterKind.RESPONSE, template_shapes)
     rows = [
         ("section", ["请求参数列表", "请求参数列表", "请求参数列表", "请求参数列表"]),
         ("header", ["序号", "字段", "类型", "描述"]),
@@ -443,37 +505,59 @@ def _fill_interface_table(table: Table, interface: ApiInterface, parameters: lis
         ("detail", ["4", "Content", "object", "参数内容" if request_rows else "空"]),
         ("detail", ["5", "RequestId", "string", "请求 ID（17位唯一标识符：yyyyMMddHHmmssfff）（Format:毫秒时间格式）"]),
         ("merged", ["Content", "", "", ""]),
-        *_typed_parameter_rows(request_rows),
+        *request_rows,
         ("section", ["返回值列表", "返回值列表", "返回值列表", "返回值列表"]),
         ("header", ["序号", "字段", "类型", "描述"]),
         ("detail", ["1", "Code", "string", "结果代码(0000=成功， 其余为错误代号)"]),
         ("detail", ["2", "Success", "bool", "执行成功与否"]),
         ("detail", ["3", "Msg", "string", "提示讯息"]),
         ("detail", ["4", "DateTime", "DateTime", "系统时间（秒）（格式：yyyy/MM/dd HH:mm:ss）"]),
-        ("detail", ["5", "Content", "object", "参数内容" if response_rows else "空"]),
-        *_typed_parameter_rows(response_rows),
+        ("detail", ["5", "Content", "object", "参数内容" if response_rows else "空"])
+        if include_response_content
+        else None,
         ("detail", ["6", "RequestId", "string", "回复请求 ID（EAP返回的17位的唯一标识，与请求的RequestID一致）"]),
+        ("merged", ["Content", "", "", ""]) if include_response_content and response_rows else None,
+        *response_rows,
     ]
+    rows = [row for row in rows if row is not None]
     _replace_rows_from(table, 5, rows)
 
 
-def _parameter_rows(parameters: list[ApiParameter], kind: ParameterKind) -> list[list[str]]:
-    rows = []
+def _template_has_response_content(template_shapes: dict[str, str]) -> bool:
+    if not template_shapes:
+        return True
+    return template_shapes.get("__response_content__", "present") == "present"
+
+
+def _parameter_rows(
+    parameters: list[ApiParameter],
+    kind: ParameterKind,
+    template_shapes: dict[str, str] | None = None,
+) -> list[tuple[str, list[str]]]:
+    rows: list[tuple[str, list[str]]] = []
     items = [
         parameter
         for parameter in sorted(parameters, key=lambda item: (item.sort_order, item.id or 0))
         if parameter.kind == kind
     ]
-    item_ids = {parameter.id for parameter in items if parameter.id is not None}
-    top_level = [
-        parameter
-        for parameter in items
-        if parameter.parent_id is None
-        or (parameter.parent_id not in item_ids and not _parameter_parent_sequence(parameter))
-    ]
-    children_by_parent = _children_by_parent(items)
-    for index, parameter in enumerate(top_level, start=1):
-        rows.extend(_parameter_tree_rows(parameter, f"4.{index}", children_by_parent))
+    for index, parameter in enumerate(items, start=1):
+        shape = template_shapes.get(parameter.field_name) if template_shapes else None
+        if _is_group_marker_parameter(parameter):
+            row_kind = "detail" if shape == "detail" else "merged"
+            rows.append((row_kind, [parameter.field_name, "", "", ""]))
+            continue
+        sequence = _parameter_sequence(parameter) or f"4.{index}"
+        rows.append(
+            (
+                "detail",
+                [
+                sequence,
+                parameter.field_name,
+                parameter.data_type,
+                _format_parameter_description(parameter),
+                ],
+            )
+        )
     return rows
 
 
@@ -663,7 +747,14 @@ def _parameter_parent_sequence(parameter: ApiParameter) -> str:
     return parent_sequence if isinstance(parent_sequence, str) else ""
 
 
-def _is_group_parameter(parameter: ApiParameter) -> bool:
+def _is_group_parameter(parameter: ApiParameter, template_shapes: dict[str, str] | None = None) -> bool:
+    if template_shapes and parameter.field_name in template_shapes:
+        return template_shapes[parameter.field_name] == "merged"
+    metadata = _parameter_metadata(parameter)
+    return bool(metadata.get("is_group")) or not parameter.data_type.strip()
+
+
+def _is_group_marker_parameter(parameter: ApiParameter) -> bool:
     metadata = _parameter_metadata(parameter)
     return bool(metadata.get("is_group")) or not parameter.data_type.strip()
 

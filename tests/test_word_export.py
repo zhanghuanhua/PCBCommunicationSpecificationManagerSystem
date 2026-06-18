@@ -617,11 +617,32 @@ def test_word_export_recovers_nested_rows_from_parent_sequence(tmp_path: Path):
     )
 
     document = Document(output)
-    table_text = "\n".join(cell.text for table in document.tables for row in table.rows for cell in row.cells)
+    rows = [
+        [
+            "\n".join(node.text or "" for node in tc.iter() if node.tag.endswith("t")).strip()
+            for tc in row._tr.tc_lst
+        ]
+        for table in document.tables
+        if len(table.columns) == 4
+        for row in table.rows
+    ]
+    table_text = "\n".join(value for row in rows for value in row)
     assert "ExtInfo（高压测试机生产结束时上报）" in table_text
     assert "NgPanelList" in table_text
     assert "NgPanel" in table_text
     assert "PanelId" in table_text
+    names_in_order = [
+        row[0] if len(row) == 1 else row[1]
+        for row in rows
+        if row and (row[0].startswith("4.6") or row[0] in {"ExtInfo（高压测试机生产结束时上报）", "NgPanel"})
+    ]
+    assert names_in_order == [
+        "Ext",
+        "ExtInfo（高压测试机生产结束时上报）",
+        "NgPanelList",
+        "NgPanel",
+        "PanelId",
+    ]
 
 
 def test_word_export_starts_toc_on_new_page_after_change_history(tmp_path: Path):
