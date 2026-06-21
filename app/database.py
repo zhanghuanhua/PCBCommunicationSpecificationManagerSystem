@@ -5,11 +5,13 @@ from datetime import UTC, datetime
 from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from app.models import ApiInterface, SpecTemplate, SpecVersion
+from app.models import ApiInterface, ApiParameter, SpecTemplate, SpecVersion
+from app.services.examples import build_request_example, build_response_example
 
 
 DATABASE_URL = "sqlite:///data/interface_manager.db"
 engine = create_engine(DATABASE_URL, echo=False)
+_PARENT_REPAIR_DONE = False
 
 
 def init_db() -> None:
@@ -18,6 +20,8 @@ def init_db() -> None:
     _ensure_version_columns()
     _remove_legacy_apiinterface_code_unique()
     _ensure_default_spec_version()
+    _repair_cross_interface_parameter_parents()
+    _repair_duplicate_interface_child_parameters()
 
 
 def _ensure_apiinterface_log_columns() -> None:
@@ -156,6 +160,201 @@ def _ensure_default_spec_version() -> None:
         session.commit()
 
 
+def _repair_cross_interface_parameter_parents() -> None:
+    global _PARENT_REPAIR_DONE
+    if _PARENT_REPAIR_DONE:
+        return
+    _PARENT_REPAIR_DONE = True
+    with Session(engine) as session:
+        parameters = session.exec(select(ApiParameter)).all()
+        interfaces = {item.id: item for item in session.exec(select(ApiInterface)).all() if item.id is not None}
+        parameters_by_id = {item.id: item for item in parameters if item.id is not None}
+        parameters_by_interface: dict[int, list[ApiParameter]] = {}
+        for parameter in parameters:
+            parameters_by_interface.setdefault(parameter.interface_id, []).append(parameter)
+
+        changed_interface_ids: set[int] = set()
+        for parameter in parameters:
+            if parameter.parent_id is None:
+                continue
+            parent = parameters_by_id.get(parameter.parent_id)
+            if not parent or parent.interface_id == parameter.interface_id:
+                continue
+            repaired_parent = _matching_parameter_in_interface(parent, parameters_by_interface.get(parameter.interface_id, []))
+            if repaired_parent and repaired_parent.id is not None:
+                parameter.parent_id = repaired_parent.id
+                session.add(parameter)
+                changed_interface_ids.add(parameter.interface_id)
+
+        for interface_id in changed_interface_ids:
+            interface = interfaces.get(interface_id)
+            if not interface:
+                continue
+            interface_parameters = parameters_by_interface.get(interface_id, [])
+            interface.request_log_example = _format_request_log(
+                interface,
+                build_request_example(interface, interface_parameters),
+            )
+            interface.response_log_example = _format_json_log(
+                build_response_example(interface, interface_parameters),
+            )
+            interface.updated_at = datetime.now(UTC)
+            session.add(interface)
+        if changed_interface_ids:
+            session.commit()
+
+
+def _repair_duplicate_interface_child_parameters() -> None:
+    with Session(engine) as session:
+        interfaces = session.exec(select(ApiInterface)).all()
+        parameters = session.exec(select(ApiParameter)).all()
+        parameters_by_interface: dict[int, list[ApiParameter]] = {}
+        for parameter in parameters:
+            parameters_by_interface.setdefault(parameter.interface_id, []).append(parameter)
+        grouped: dict[tuple[int | None, str], list[ApiInterface]] = {}
+        for interface in interfaces:
+            grouped.setdefault((interface.spec_version_id, interface.code), []).append(interface)
+
+        changed_interface_ids: set[int] = set()
+        for candidates in grouped.values():
+            if len(candidates) < 2:
+                continue
+            for target in candidates:
+                target_id = target.id or 0
+                target_parameters = parameters_by_interface.get(target_id, [])
+                for source in candidates:
+                    source_id = source.id or 0
+                    if source_id == target_id:
+                        continue
+                    if _copy_missing_child_parameters(
+                        target_id,
+                        target_parameters,
+                        parameters_by_interface.get(source_id, []),
+                        session,
+                    ):
+                        changed_interface_ids.add(target_id)
+                        target_parameters = session.exec(
+                            select(ApiParameter).where(ApiParameter.interface_id == target_id)
+                        ).all()
+                        parameters_by_interface[target_id] = target_parameters
+
+        interfaces_by_id = {interface.id: interface for interface in interfaces if interface.id is not None}
+        for interface_id in changed_interface_ids:
+            interface = interfaces_by_id.get(interface_id)
+            if not interface:
+                continue
+            interface_parameters = parameters_by_interface.get(interface_id, [])
+            interface.request_log_example = _format_request_log(
+                interface,
+                build_request_example(interface, interface_parameters),
+            )
+            interface.response_log_example = _format_json_log(
+                build_response_example(interface, interface_parameters),
+            )
+            interface.updated_at = datetime.now(UTC)
+            session.add(interface)
+        if changed_interface_ids:
+            session.commit()
+
+
+def _copy_missing_child_parameters(
+    target_interface_id: int,
+    target_parameters: list[ApiParameter],
+    source_parameters: list[ApiParameter],
+    session: Session,
+) -> bool:
+    target_parent_by_signature = {
+        _parameter_signature(parameter): parameter
+        for parameter in target_parameters
+        if parameter.parent_id is None
+    }
+    target_children_by_parent: dict[int, list[ApiParameter]] = {}
+    for parameter in target_parameters:
+        if parameter.parent_id is not None:
+            target_children_by_parent.setdefault(parameter.parent_id, []).append(parameter)
+    source_children_by_parent: dict[int, list[ApiParameter]] = {}
+    source_parameters_by_id = {parameter.id: parameter for parameter in source_parameters if parameter.id is not None}
+    for parameter in source_parameters:
+        if parameter.parent_id is not None:
+            source_children_by_parent.setdefault(parameter.parent_id, []).append(parameter)
+
+    changed = False
+    for source_parent_id, source_children in source_children_by_parent.items():
+        source_parent = source_parameters_by_id.get(source_parent_id)
+        if not source_parent:
+            continue
+        target_parent = target_parent_by_signature.get(_parameter_signature(source_parent))
+        if not target_parent or target_parent.id is None:
+            continue
+        existing_child_signatures = {
+            _parameter_signature(child)
+            for child in target_children_by_parent.get(target_parent.id, [])
+        }
+        for child in sorted(source_children, key=lambda item: (item.sort_order, item.id or 0)):
+            if _parameter_signature(child) in existing_child_signatures:
+                continue
+            copied_child = ApiParameter(
+                interface_id=target_interface_id,
+                kind=child.kind,
+                parent_id=target_parent.id,
+                sort_order=child.sort_order,
+                field_name=child.field_name,
+                data_type=child.data_type,
+                required=child.required,
+                is_array=child.is_array,
+                example_value=child.example_value,
+                description=child.description,
+                enum_options=child.enum_options,
+            )
+            session.add(copied_child)
+            changed = True
+    if changed:
+        session.flush()
+    return changed
+
+
+def _parameter_signature(parameter: ApiParameter) -> tuple:
+    return (parameter.kind, parameter.sort_order, parameter.field_name, parameter.data_type)
+
+
+def _matching_parameter_in_interface(source_parent: ApiParameter, candidates: list[ApiParameter]) -> ApiParameter | None:
+    matches = [
+        item
+        for item in candidates
+        if item.kind == source_parent.kind
+        and item.field_name == source_parent.field_name
+        and item.sort_order == source_parent.sort_order
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    matches = [
+        item
+        for item in candidates
+        if item.kind == source_parent.kind
+        and item.field_name == source_parent.field_name
+        and item.data_type == source_parent.data_type
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    matches = [
+        item
+        for item in candidates
+        if item.kind == source_parent.kind
+        and item.field_name == source_parent.field_name
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _format_request_log(interface: ApiInterface, request_example: dict) -> str:
+    return f"REST:POST http://IP:Port/api/{interface.api_name}\n{_format_json_log(request_example)}"
+
+
+def _format_json_log(data: dict) -> str:
+    import json
+
+    return json.dumps(data, ensure_ascii=False, indent=4)
+
+
 def _guess_version(filename: str) -> str:
     import re
 
@@ -178,5 +377,7 @@ def get_session() -> Generator[Session, None, None]:
     _ensure_version_columns()
     _remove_legacy_apiinterface_code_unique()
     _ensure_default_spec_version()
+    _repair_cross_interface_parameter_parents()
+    _repair_duplicate_interface_child_parameters()
     with Session(engine) as session:
         yield session

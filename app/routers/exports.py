@@ -405,22 +405,44 @@ def _copy_version_interfaces(session: Session, source: SpecVersion, target: Spec
             .where(ApiParameter.interface_id == interface.id)
             .order_by(ApiParameter.sort_order, ApiParameter.id)
         ).all()
+        old_to_new_parameter_id: dict[int, int] = {}
+        copied_parameters: list[tuple[ApiParameter, ApiParameter]] = []
         for parameter in parameters:
-            session.add(
-                ApiParameter(
-                    interface_id=copied.id or 0,
-                    kind=parameter.kind,
-                    parent_id=parameter.parent_id,
-                    sort_order=parameter.sort_order,
-                    field_name=parameter.field_name,
-                    data_type=parameter.data_type,
-                    required=parameter.required,
-                    is_array=parameter.is_array,
-                    example_value=parameter.example_value,
-                    description=parameter.description,
-                    enum_options=parameter.enum_options,
-                )
+            copied_parameter = ApiParameter(
+                interface_id=copied.id or 0,
+                kind=parameter.kind,
+                parent_id=None,
+                sort_order=parameter.sort_order,
+                field_name=parameter.field_name,
+                data_type=parameter.data_type,
+                required=parameter.required,
+                is_array=parameter.is_array,
+                example_value=parameter.example_value,
+                description=parameter.description,
+                enum_options=parameter.enum_options,
             )
+            session.add(copied_parameter)
+            session.flush()
+            if parameter.id is not None and copied_parameter.id is not None:
+                old_to_new_parameter_id[parameter.id] = copied_parameter.id
+            copied_parameters.append((parameter, copied_parameter))
+        for source_parameter, copied_parameter in copied_parameters:
+            if source_parameter.parent_id is not None:
+                copied_parameter.parent_id = old_to_new_parameter_id.get(source_parameter.parent_id)
+                session.add(copied_parameter)
+        session.flush()
+        refreshed_parameters = [copied_parameter for _, copied_parameter in copied_parameters]
+        copied.request_log_example = _format_request_log(copied, build_request_example(copied, refreshed_parameters))
+        copied.response_log_example = json.dumps(
+            build_response_example(copied, refreshed_parameters),
+            ensure_ascii=False,
+            indent=4,
+        )
+        session.add(copied)
+
+
+def _format_request_log(interface: ApiInterface, request_example: dict) -> str:
+    return f"REST:POST http://IP:Port/api/{interface.api_name}\n{json.dumps(request_example, ensure_ascii=False, indent=4)}"
 
 
 @router.get("/download/{filename}")

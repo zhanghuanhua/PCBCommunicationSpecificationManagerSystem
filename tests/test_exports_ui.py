@@ -533,3 +533,85 @@ def test_export_as_new_version_saves_version_record(tmp_path):
 
     assert [item.version for item in versions] == ["4.0", "4.1"]
     assert copied.code == "EQP-EAP-001"
+
+
+def test_export_as_new_version_remaps_parameter_parent_ids(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        interface = ApiInterface(
+            spec_version_id=spec_version.id,
+            code="EAP-EQP-010",
+            name="裁切任务下发",
+            direction=InterfaceDirection.EAP_TO_EQP,
+            api_name="EAP_PPCuttingInfoSend",
+            caller="EAP",
+            provider="EQP",
+        )
+        session.add(interface)
+        session.commit()
+        session.refresh(interface)
+        parent = ApiParameter(
+            interface_id=interface.id or 0,
+            kind=ParameterKind.REQUEST,
+            sort_order=5,
+            field_name="StackUpDetail",
+            data_type="List<StackUp>",
+            description="叠构",
+        )
+        session.add(parent)
+        session.commit()
+        session.refresh(parent)
+        session.add(
+            ApiParameter(
+                interface_id=interface.id or 0,
+                kind=ParameterKind.REQUEST,
+                parent_id=parent.id,
+                sort_order=1,
+                field_name="PPSequence",
+                data_type="Int",
+                example_value="1",
+                description="顺序号",
+            )
+        )
+        session.commit()
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={
+                "export_format": "markdown",
+                "spec_version_id": str(spec_version_id),
+                "target_version": "4.1",
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    with Session(engine) as session:
+        copied = session.exec(
+            select(ApiInterface).where(ApiInterface.version == "4.1")
+        ).one()
+        copied_parameters = session.exec(
+            select(ApiParameter)
+            .where(ApiParameter.interface_id == copied.id)
+            .order_by(ApiParameter.sort_order, ApiParameter.id)
+        ).all()
+    copied_parent = next(parameter for parameter in copied_parameters if parameter.field_name == "StackUpDetail")
+    copied_child = next(parameter for parameter in copied_parameters if parameter.field_name == "PPSequence")
+    assert copied_child.parent_id == copied_parent.id
+    assert '"StackUpDetail": [' in copied.request_log_example
+    assert '"PPSequence": 1' in copied.request_log_example

@@ -144,6 +144,30 @@ def _latest_spec_version(session: Session) -> SpecVersion | None:
     return session.exec(select(SpecVersion).order_by(SpecVersion.created_at.desc())).first()
 
 
+def _parameter_tree(parameters: list[ApiParameter]) -> list[dict]:
+    children_by_parent: dict[int, list[ApiParameter]] = {}
+    root_parameters: list[ApiParameter] = []
+    parameter_ids = {item.id for item in parameters if item.id is not None}
+    for parameter in parameters:
+        if parameter.parent_id in parameter_ids:
+            children_by_parent.setdefault(parameter.parent_id or 0, []).append(parameter)
+        else:
+            root_parameters.append(parameter)
+    for items in children_by_parent.values():
+        items.sort(key=lambda item: (item.sort_order, item.id or 0))
+    root_parameters.sort(key=lambda item: (item.sort_order, item.id or 0))
+    rows: list[dict] = []
+
+    def append(parameter: ApiParameter, sequence: str, depth: int) -> None:
+        rows.append({"parameter": parameter, "sequence": sequence, "depth": depth})
+        for index, child in enumerate(children_by_parent.get(parameter.id or 0, []), start=1):
+            append(child, f"{sequence}.{index}", depth + 1)
+
+    for index, parameter in enumerate(root_parameters, start=1):
+        append(parameter, str(index), 0)
+    return rows
+
+
 @router.post("/{interface_id}/delete")
 def delete_interface(
     interface_id: int,
@@ -181,8 +205,8 @@ def interface_detail(
             "title": interface.name,
             "interface": interface,
             "spec_version": spec_version,
-            "request_parameters": [item for item in parameters if item.kind == ParameterKind.REQUEST],
-            "response_parameters": [item for item in parameters if item.kind == ParameterKind.RESPONSE],
+            "request_parameters": _parameter_tree([item for item in parameters if item.kind == ParameterKind.REQUEST]),
+            "response_parameters": _parameter_tree([item for item in parameters if item.kind == ParameterKind.RESPONSE]),
             "kinds": ParameterKind,
             "parameter_type_options": PARAMETER_TYPE_OPTIONS,
         },

@@ -11,11 +11,17 @@
     </tr>
   </thead>
   <tbody>
-    {% for parameter in parameters %}
+    {% for row in parameters %}
+    {% set parameter = row.parameter if row.parameter is defined else row %}
+    {% set sequence = row.sequence if row.sequence is defined else "" %}
+    {% set depth = row.depth if row.depth is defined else 0 %}
     <tr id="parameter-{{ parameter.id }}">
       <td class="actions-column">
         <form id="parameter-edit-{{ parameter.id }}" method="post" action="/interfaces/{{ interface.id }}/parameters/{{ parameter.id }}"></form>
-        <input form="parameter-edit-{{ parameter.id }}" name="field_name" value="{{ parameter.field_name }}" required>
+        {% if sequence %}
+        <span class="parameter-sequence">{{ sequence }}</span>
+        {% endif %}
+        <input class="parameter-depth-{{ depth }}" form="parameter-edit-{{ parameter.id }}" name="field_name" value="{{ parameter.field_name }}" required>
         <input form="parameter-edit-{{ parameter.id }}" type="hidden" name="kind" value="{{ parameter.kind.value }}">
       </td>
       <td>
