@@ -496,6 +496,70 @@ td {
   max-width: 780px;
 }
 
+.new-interface-form {
+  display: grid;
+  gap: 14px;
+  width: calc(100vw - 48px);
+  max-width: 1400px;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+.new-interface-header,
+.new-interface-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.new-interface-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.new-interface-header h2,
+.new-interface-header p {
+  margin: 0;
+}
+
+.new-interface-header h2 {
+  margin-top: 3px;
+  font-size: 22px;
+}
+
+.new-interface-header p:not(.eyebrow) {
+  color: var(--muted);
+}
+
+.new-interface-panel {
+  padding: 16px;
+}
+
+.new-interface-base-grid {
+  display: grid;
+  grid-template-columns: 180px minmax(180px, 1fr) minmax(220px, 1.3fr) minmax(220px, 1.3fr);
+  gap: 10px;
+}
+
+.new-interface-base-grid textarea {
+  min-height: 64px;
+}
+
+.new-interface-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 0 0;
+  background: linear-gradient(to bottom, rgba(238, 243, 248, 0), var(--bg) 32%);
+}
+
 .detail-grid,
 .parameter-grid,
 .interface-detail-layout {
@@ -628,6 +692,103 @@ td {
 
 .compact-heading {
   margin-bottom: 0;
+}
+
+.parameter-table-section {
+  background: var(--panel);
+}
+
+.batch-parameter-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+}
+
+.batch-parameter-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.batch-parameter-table th,
+.batch-parameter-table td {
+  padding: 6px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.batch-parameter-table th {
+  height: 36px;
+  background: #eef2f7;
+  font-weight: 700;
+}
+
+.batch-parameter-table tbody tr {
+  display: table-row;
+  background: #fff;
+}
+
+.batch-parameter-table tbody tr:nth-child(odd) {
+  background: #f8fbff;
+}
+
+.batch-parameter-table .seq-column,
+.batch-parameter-table .seq-cell {
+  width: 56px;
+  text-align: center;
+}
+
+.batch-parameter-table .field-column {
+  width: 180px;
+}
+
+.batch-parameter-table .type-column {
+  width: 130px;
+}
+
+.batch-parameter-table .custom-type-column {
+  width: 180px;
+}
+
+.batch-parameter-table .example-column {
+  width: 170px;
+}
+
+.batch-parameter-table .description-column {
+  width: 360px;
+}
+
+.batch-parameter-table .action-column,
+.batch-parameter-table .action-cell {
+  width: 92px;
+  text-align: center;
+}
+
+.batch-parameter-table input,
+.batch-parameter-table select,
+.batch-parameter-table textarea {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+}
+
+.batch-parameter-table .description-cell textarea,
+.auto-grow-textarea {
+  min-height: 34px;
+  max-height: 140px;
+  line-height: 1.45;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  resize: none;
+}
+
+.batch-parameter-table .batch-row-remove {
+  margin-top: 0;
+}
+
+.parameter-table-note {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .wide-field {
@@ -781,6 +942,7 @@ textarea {
   .stats-grid,
   .quick-actions-grid,
   .version-stats-row,
+  .new-interface-base-grid,
   .detail-grid,
   .parameter-grid,
   .interface-detail-layout,

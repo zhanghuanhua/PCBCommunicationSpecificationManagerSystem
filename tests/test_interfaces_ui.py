@@ -399,6 +399,10 @@ def test_new_interface_page_shows_create_form():
     assert "响应参数" in response.text
     assert 'name="request_field_name"' in response.text
     assert 'name="response_field_name"' in response.text
+    assert "new-interface-form" in response.text
+    assert "batch-parameter-table" in response.text
+    assert "字段说明" in response.text
+    assert "auto-grow-textarea" in response.text
     assert "request-parameter-row-template" in response.text
     assert "response-parameter-row-template" in response.text
     assert "新增一行" in response.text

@@ -8,6 +8,8 @@ document.addEventListener("click", (event) => {
     if (list && template) {
       list.append(template.content.cloneNode(true));
       updateRemoveButtons(list);
+      updateRowIndexes(list);
+      bindAutoGrowTextareas(list);
     }
     return;
   }
@@ -19,11 +21,16 @@ document.addEventListener("click", (event) => {
     if (row && list && list.querySelectorAll("[data-parameter-row]").length > 1) {
       row.remove();
       updateRemoveButtons(list);
+      updateRowIndexes(list);
     }
   }
 });
 
-document.querySelectorAll("[data-parameter-list]").forEach(updateRemoveButtons);
+document.querySelectorAll("[data-parameter-list]").forEach((list) => {
+  updateRemoveButtons(list);
+  updateRowIndexes(list);
+});
+bindAutoGrowTextareas(document);
 
 function updateRemoveButtons(list) {
   const rows = list.querySelectorAll("[data-parameter-row]");
@@ -33,4 +40,27 @@ function updateRemoveButtons(list) {
       button.disabled = rows.length <= 1;
     }
   });
+}
+
+function updateRowIndexes(list) {
+  list.querySelectorAll("[data-row-index]").forEach((cell, index) => {
+    cell.textContent = String(index + 1);
+  });
+}
+
+function bindAutoGrowTextareas(scope) {
+  scope.querySelectorAll(".auto-grow-textarea").forEach((textarea) => {
+    if (textarea.dataset.autoGrowBound === "1") {
+      autoGrow(textarea);
+      return;
+    }
+    textarea.dataset.autoGrowBound = "1";
+    autoGrow(textarea);
+    textarea.addEventListener("input", () => autoGrow(textarea));
+  });
+}
+
+function autoGrow(textarea) {
+  textarea.style.height = "34px";
+  textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
 }

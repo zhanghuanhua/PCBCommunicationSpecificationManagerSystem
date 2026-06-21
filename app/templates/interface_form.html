@@ -1,96 +1,145 @@
 {% extends "base.html" %}
 
 {% block content %}
-<form class="form-panel" method="post" action="/interfaces">
+<form class="new-interface-form" method="post" action="/interfaces">
   <input type="hidden" name="spec_version_id" value="{{ spec_version.id }}">
-  <section class="form-context">
-    <p class="eyebrow">Version {{ spec_version.version }}</p>
-    <h2>新增接口</h2>
-    <p>{{ spec_version.name }} v{{ spec_version.version }}</p>
-  </section>
-  <label>
-    接口方向
-    <select name="direction">
-      <option value="EQP_TO_EAP">EQP -> EAP</option>
-      <option value="EAP_TO_EQP">EAP -> EQP</option>
-    </select>
-  </label>
-  <label>
-    接口编号
-    <input name="code" placeholder="例如 EQP-EAP-037" required>
-  </label>
-  <label>
-    接口名称
-    <input name="name" placeholder="例如 设备状态上报" required>
-  </label>
-  <label>
-    API 名称
-    <input name="api_name" placeholder="例如 EQP_EquipmentCurrentStatus" required>
-  </label>
-  <label>
-    需求说明
-    <textarea name="requirement"></textarea>
-  </label>
-  <label>
-    使用场景
-    <textarea name="scenario"></textarea>
-  </label>
-  <label>
-    服务描述
-    <textarea name="service_description"></textarea>
-  </label>
-  <label>
-    版本
-    <input name="version" value="{{ spec_version.version }}">
-  </label>
-  <label>
-    业务模块
-    <input name="module">
-  </label>
 
-  <section class="inline-parameter-section batch-parameter-section" data-batch-parameter-section data-row-template-id="request-parameter-row-template">
+  <section class="new-interface-header">
+    <div>
+      <p class="eyebrow">Version {{ spec_version.version }}</p>
+      <h2>新增接口</h2>
+      <p>{{ spec_version.name }} v{{ spec_version.version }}</p>
+    </div>
+    <a class="button secondary" href="/specs/{{ spec_version.id }}">返回工作台</a>
+  </section>
+
+  <section class="new-interface-panel">
+    <div class="section-heading">
+      <div>
+        <h2>接口基础信息</h2>
+        <p>维护接口编号、调用方向和服务说明。</p>
+      </div>
+    </div>
+    <div class="new-interface-base-grid">
+      <label>
+        接口方向
+        <select name="direction">
+          <option value="EQP_TO_EAP">EQP -> EAP</option>
+          <option value="EAP_TO_EQP">EAP -> EQP</option>
+        </select>
+      </label>
+      <label>
+        接口编号
+        <input name="code" placeholder="例如 EQP-EAP-037" required>
+      </label>
+      <label>
+        接口名称
+        <input name="name" placeholder="例如 设备状态上报" required>
+      </label>
+      <label>
+        API 名称
+        <input name="api_name" placeholder="例如 EQP_EquipmentCurrentStatus" required>
+      </label>
+      <label>
+        版本
+        <input name="version" value="{{ spec_version.version }}">
+      </label>
+      <label>
+        业务模块
+        <input name="module">
+      </label>
+      <label class="wide-field">
+        需求说明
+        <textarea name="requirement"></textarea>
+      </label>
+      <label class="wide-field">
+        使用场景
+        <textarea name="scenario"></textarea>
+      </label>
+      <label class="wide-field">
+        服务描述
+        <textarea name="service_description"></textarea>
+      </label>
+    </div>
+  </section>
+
+  <section class="new-interface-panel batch-parameter-section parameter-table-section" data-batch-parameter-section data-row-template-id="request-parameter-row-template">
     <div class="section-heading">
       <div>
         <h2>请求参数</h2>
-        <p>一次录入多条请求 Content 参数。</p>
+        <p>请求 Content 参数，一行一个字段。</p>
       </div>
       <button class="button secondary small-button" type="button" data-add-parameter-row>新增一行</button>
     </div>
-    <div class="batch-parameter-list" data-parameter-list>
-      {% set parameter_prefix = "request" %}
-      {% set default_field_placeholder = "例如 MaData" %}
-      {% set default_example_placeholder = "例如 D001" %}
-      {% include "parameter_batch_row.html" %}
+    <div class="batch-parameter-table-scroll">
+      <table class="batch-parameter-table">
+        <thead>
+          <tr>
+            <th class="seq-column">序号</th>
+            <th class="field-column">字段名</th>
+            <th class="type-column">类型</th>
+            <th class="custom-type-column">自定义类型</th>
+            <th class="example-column">示例值</th>
+            <th class="description-column">字段说明</th>
+            <th class="action-column">操作</th>
+          </tr>
+        </thead>
+        <tbody data-parameter-list>
+          {% set parameter_prefix = "request" %}
+          {% set default_field_placeholder = "例如 MaData" %}
+          {% set default_example_placeholder = "例如 D001" %}
+          {% set parameter_row_mode = "table" %}
+          {% include "parameter_batch_row.html" %}
+        </tbody>
+      </table>
     </div>
+    <p class="parameter-table-note">空字段名的行保存时自动忽略。</p>
     <div class="checkbox-row">
       <input type="hidden" name="request_required" value="1">
       <input type="hidden" name="request_is_array" value="0">
     </div>
   </section>
 
-  <section class="inline-parameter-section batch-parameter-section" data-batch-parameter-section data-row-template-id="response-parameter-row-template">
+  <section class="new-interface-panel batch-parameter-section parameter-table-section" data-batch-parameter-section data-row-template-id="response-parameter-row-template">
     <div class="section-heading">
       <div>
         <h2>响应参数</h2>
-        <p>一次录入多条响应 Content 参数。</p>
+        <p>响应 Content 参数，一行一个字段。</p>
       </div>
       <button class="button secondary small-button" type="button" data-add-parameter-row>新增一行</button>
     </div>
-    <div class="batch-parameter-list" data-parameter-list>
-      {% set parameter_prefix = "response" %}
-      {% set default_field_placeholder = "例如 Result" %}
-      {% set default_example_placeholder = "例如 true" %}
-      {% include "parameter_batch_row.html" %}
+    <div class="batch-parameter-table-scroll">
+      <table class="batch-parameter-table">
+        <thead>
+          <tr>
+            <th class="seq-column">序号</th>
+            <th class="field-column">字段名</th>
+            <th class="type-column">类型</th>
+            <th class="custom-type-column">自定义类型</th>
+            <th class="example-column">示例值</th>
+            <th class="description-column">字段说明</th>
+            <th class="action-column">操作</th>
+          </tr>
+        </thead>
+        <tbody data-parameter-list>
+          {% set parameter_prefix = "response" %}
+          {% set default_field_placeholder = "例如 Result" %}
+          {% set default_example_placeholder = "例如 true" %}
+          {% set parameter_row_mode = "table" %}
+          {% include "parameter_batch_row.html" %}
+        </tbody>
+      </table>
     </div>
+    <p class="parameter-table-note">空字段名的行保存时自动忽略。</p>
     <div class="checkbox-row">
       <input type="hidden" name="response_required" value="1">
       <input type="hidden" name="response_is_array" value="0">
     </div>
   </section>
 
-  <div class="actions">
+  <div class="new-interface-actions">
+    <a class="button secondary" href="/specs/{{ spec_version.id }}">取消</a>
     <button type="submit">保存接口</button>
-    <a href="/specs/{{ spec_version.id }}">取消</a>
   </div>
 </form>
 
@@ -98,12 +147,14 @@
   {% set parameter_prefix = "request" %}
   {% set default_field_placeholder = "例如 MaData" %}
   {% set default_example_placeholder = "例如 D001" %}
+  {% set parameter_row_mode = "table" %}
   {% include "parameter_batch_row.html" %}
 </template>
 <template id="response-parameter-row-template">
   {% set parameter_prefix = "response" %}
   {% set default_field_placeholder = "例如 Result" %}
   {% set default_example_placeholder = "例如 true" %}
+  {% set parameter_row_mode = "table" %}
   {% include "parameter_batch_row.html" %}
 </template>
 {% endblock %}

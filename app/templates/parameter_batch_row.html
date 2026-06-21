@@ -1,3 +1,31 @@
+{% if parameter_row_mode == "table" %}
+<tr class="batch-parameter-row" data-parameter-row>
+  <td class="seq-cell" data-row-index></td>
+  <td>
+    <input name="{{ parameter_prefix }}_field_name" placeholder="{{ default_field_placeholder }}">
+  </td>
+  <td>
+    <select name="{{ parameter_prefix }}_data_type_choice">
+      {% for type_option in parameter_type_options %}
+      <option value="{{ type_option }}">{{ type_option }}</option>
+      {% endfor %}
+      <option value="CUSTOM">自定义</option>
+    </select>
+  </td>
+  <td>
+    <input name="{{ parameter_prefix }}_custom_data_type" placeholder="例如 List&lt;Data&gt;">
+  </td>
+  <td>
+    <input name="{{ parameter_prefix }}_example_value" placeholder="{{ default_example_placeholder }}">
+  </td>
+  <td class="description-cell">
+    <textarea class="auto-grow-textarea" name="{{ parameter_prefix }}_description" placeholder="字段用途说明"></textarea>
+  </td>
+  <td class="action-cell">
+    <button class="small-button danger batch-row-remove" type="button" data-remove-parameter-row>删除</button>
+  </td>
+</tr>
+{% else %}
 <div class="batch-parameter-row" data-parameter-row>
   <div class="batch-parameter-fields">
     <label>
@@ -23,8 +51,9 @@
     </label>
     <label class="wide-field">
       字段说明
-      <textarea name="{{ parameter_prefix }}_description"></textarea>
+      <textarea class="auto-grow-textarea" name="{{ parameter_prefix }}_description"></textarea>
     </label>
   </div>
   <button class="small-button danger batch-row-remove" type="button" data-remove-parameter-row>删除</button>
 </div>
+{% endif %}
