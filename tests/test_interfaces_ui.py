@@ -399,6 +399,9 @@ def test_new_interface_page_shows_create_form():
     assert "响应参数" in response.text
     assert 'name="request_field_name"' in response.text
     assert 'name="response_field_name"' in response.text
+    assert "request-parameter-row-template" in response.text
+    assert "response-parameter-row-template" in response.text
+    assert "新增一行" in response.text
 
 
 def test_create_interface_can_save_parameters_from_new_page(tmp_path):
@@ -463,6 +466,61 @@ def test_create_interface_can_save_parameters_from_new_page(tmp_path):
     assert {parameter.field_name for parameter in parameters} == {"MaData", "Result"}
 
 
+def test_create_interface_can_save_multiple_parameters_from_new_page(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.2")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/interfaces",
+            data={
+                "spec_version_id": str(spec_version_id),
+                "direction": "EQP_TO_EAP",
+                "code": "EQP-EAP-110",
+                "name": "批量参数接口",
+                "api_name": "EQP_BatchParameterReport",
+                "version": "4.2",
+                "request_field_name": ["LotId", "PanelId", ""],
+                "request_data_type_choice": ["string", "CUSTOM", "string"],
+                "request_custom_data_type": ["", "List<Panel>", ""],
+                "request_example_value": ["L001", "P001", ""],
+                "request_description": ["批次号", "板号列表", ""],
+                "response_field_name": ["Result", "Message"],
+                "response_data_type_choice": ["bool", "string"],
+                "response_custom_data_type": ["", ""],
+                "response_example_value": ["true", "OK"],
+                "response_description": ["执行结果", "返回信息"],
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    with Session(engine) as session:
+        interface = session.exec(select(ApiInterface).where(ApiInterface.code == "EQP-EAP-110")).one()
+        parameters = session.exec(
+            select(ApiParameter)
+            .where(ApiParameter.interface_id == interface.id)
+            .order_by(ApiParameter.kind, ApiParameter.sort_order)
+        ).all()
+    assert [parameter.field_name for parameter in parameters] == ["LotId", "PanelId", "Result", "Message"]
+    assert [parameter.sort_order for parameter in parameters] == [1, 2, 1, 2]
+    assert parameters[1].data_type == "List<Panel>"
+
+
 def test_import_spec_page_shows_template_import_placeholder():
     client = TestClient(app)
 
@@ -491,6 +549,8 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "响应日志范例" in response.text
     assert "新增参数" in response.text
     assert "添加参数" in response.text
+    assert "一次添加多条请求或响应字段" in response.text
+    assert "batch-parameter-row-template" in response.text
     assert "保存接口信息" in response.text
     assert 'name="code"' in response.text
     assert 'name="api_name"' in response.text
@@ -502,9 +562,9 @@ def test_interface_detail_page_shows_parameter_sections(tmp_path):
     assert "parameter-table-scroll" in response.text
     assert '<option value="string">string</option>' in response.text
     assert '<option value="CUSTOM">自定义</option>' in response.text
-    assert 'name="custom_data_type"' in response.text
-    assert "选择自定义时必填" in response.text
-    assert 'name="example_value"' in response.text
+    assert 'name="batch_custom_data_type"' in response.text
+    assert "例如 List&lt;Data&gt;" in response.text
+    assert 'name="batch_example_value"' in response.text
     assert "parameter-grid" not in response.text
     assert "detail-side-panel" not in response.text
     assert "示例值</th>" not in response.text
@@ -564,6 +624,29 @@ def test_add_parameter_to_interface_detail_page(tmp_path):
     assert "批次号" in response.text
     assert "请求参数" in response.text
     assert "L001" in response.text
+
+
+def test_add_multiple_parameters_to_interface_detail_page(tmp_path):
+    client, interface_id = _client_with_interface(tmp_path)
+    try:
+        response = client.post(
+            f"/interfaces/{interface_id}/parameters/batch",
+            data={
+                "batch_kind": "REQUEST",
+                "batch_field_name": ["LotId", "PanelId"],
+                "batch_data_type_choice": ["string", "string"],
+                "batch_custom_data_type": ["", ""],
+                "batch_example_value": ["L001", "P001"],
+                "batch_description": ["批次号", "板号"],
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "LotId" in response.text
+    assert "PanelId" in response.text
 
 
 def test_update_parameter_on_interface_detail_page(tmp_path):

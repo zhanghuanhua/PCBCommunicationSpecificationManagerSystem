@@ -565,6 +565,71 @@ td {
   gap: 14px;
 }
 
+.batch-parameter-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.batch-parameter-list {
+  display: grid;
+  gap: 10px;
+}
+
+.batch-parameter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.batch-parameter-fields {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.1fr) minmax(120px, 0.7fr) minmax(160px, 1fr) minmax(140px, 0.9fr);
+  gap: 10px;
+}
+
+.batch-row-remove {
+  margin-top: 25px;
+}
+
+.batch-row-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.batch-kind-tabs {
+  display: inline-flex;
+  width: max-content;
+  gap: 8px;
+  padding: 4px;
+  background: #eef2f7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.batch-kind-tabs label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.compact-heading {
+  margin-bottom: 0;
+}
+
 .wide-field {
   grid-column: 1 / -1;
 }
@@ -719,8 +784,14 @@ textarea {
   .detail-grid,
   .parameter-grid,
   .interface-detail-layout,
-  .parameter-add-grid {
+  .parameter-add-grid,
+  .batch-parameter-fields,
+  .batch-parameter-row {
     grid-template-columns: 1fr;
+  }
+
+  .batch-row-remove {
+    margin-top: 0;
   }
 
   .interface-table-scroll {

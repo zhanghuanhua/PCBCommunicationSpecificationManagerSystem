@@ -229,6 +229,48 @@ def add_parameter(
     return RedirectResponse(f"/interfaces/{interface_id}#parameter-{parameter.id}", status_code=303)
 
 
+@router.post("/{interface_id}/parameters/batch")
+def add_parameters_batch(
+    interface_id: int,
+    batch_kind: ParameterKind = Form(...),
+    batch_field_name: Annotated[list[str], Form()] = [],
+    batch_data_type_choice: Annotated[list[str], Form()] = [],
+    batch_custom_data_type: Annotated[list[str], Form()] = [],
+    batch_example_value: Annotated[list[str], Form()] = [],
+    batch_description: Annotated[list[str], Form()] = [],
+    session: Session = Depends(get_session),
+):
+    interface = session.get(ApiInterface, interface_id)
+    if not interface:
+        raise HTTPException(status_code=404, detail="接口不存在")
+    existing = session.exec(
+        select(ApiParameter).where(
+            ApiParameter.interface_id == interface_id,
+            ApiParameter.kind == batch_kind,
+        )
+    ).all()
+    added = _add_parameters_from_new_form(
+        interface_id,
+        batch_kind,
+        batch_field_name,
+        batch_data_type_choice,
+        batch_custom_data_type,
+        batch_example_value,
+        batch_description,
+        [],
+        [],
+        session,
+        start_order=len(existing) + 1,
+    )
+    if added:
+        interface.updated_at = datetime.now(UTC)
+        interface.status = InterfaceStatus.DRAFT
+        session.add(interface)
+        session.commit()
+        _sync_log_example(interface_id, batch_kind, session)
+    return RedirectResponse(f"/interfaces/{interface_id}", status_code=303)
+
+
 @router.post("/{interface_id}/parameters/{parameter_id}")
 def update_parameter(
     interface_id: int,
@@ -319,7 +361,9 @@ def _add_parameters_from_new_form(
     required_flags: list[str],
     array_flags: list[str],
     session: Session,
-) -> None:
+    start_order: int = 1,
+) -> int:
+    added = 0
     for index, field_name in enumerate(field_names):
         field_name = field_name.strip()
         if not field_name:
@@ -328,7 +372,7 @@ def _add_parameters_from_new_form(
             ApiParameter(
                 interface_id=interface_id,
                 kind=kind,
-                sort_order=index + 1,
+                sort_order=start_order + added,
                 field_name=field_name,
                 data_type=_resolve_data_type(
                     "",
@@ -341,6 +385,8 @@ def _add_parameters_from_new_form(
                 description=_list_value(descriptions, index, field_name),
             )
         )
+        added += 1
+    return added
 
 
 def _list_value(values: list[str], index: int, default: str = "") -> str:
