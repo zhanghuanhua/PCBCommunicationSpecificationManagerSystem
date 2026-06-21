@@ -551,13 +551,51 @@ def _parameter_rows(
     rows: list[tuple[str, list[str]]] = []
     for index, parameter in enumerate(root_items, start=1):
         fallback_sequence = _parameter_sequence(parameter) or f"4.{index}"
+        if _is_group_parameter(parameter, template_shapes or {}):
+            rows.extend(
+                _parameter_rows_for_tree(
+                    parameter,
+                    fallback_sequence,
+                    children_by_parent,
+                    template_shapes or {},
+                    attached_to_parent=False,
+                )
+            )
+            continue
+        rows.append(_parameter_detail_row(parameter, fallback_sequence))
+    for index, parameter in enumerate(root_items, start=1):
+        fallback_sequence = _parameter_sequence(parameter) or f"4.{index}"
         rows.extend(
-            _parameter_rows_for_tree(
+            _parameter_child_group_rows(
                 parameter,
                 fallback_sequence,
                 children_by_parent,
                 template_shapes or {},
-                attached_to_parent=False,
+            )
+        )
+    return rows
+
+
+def _parameter_child_group_rows(
+    parameter: ApiParameter,
+    fallback_sequence: str,
+    children_by_parent: dict[int, list[ApiParameter]],
+    template_shapes: dict[str, str],
+) -> list[tuple[str, list[str]]]:
+    children = children_by_parent.get(parameter.id or 0, [])
+    if not children or _is_group_parameter(parameter, template_shapes):
+        return []
+    sequence = _parameter_sequence(parameter) or fallback_sequence
+    rows: list[tuple[str, list[str]]] = [("merged", [_node_group_title(parameter), "", "", ""])]
+    for index, child in enumerate(children, start=1):
+        child_sequence = _parameter_sequence(child) or f"{sequence}.{index}"
+        rows.extend(
+            _parameter_rows_for_tree(
+                child,
+                child_sequence,
+                children_by_parent,
+                template_shapes,
+                attached_to_parent=True,
             )
         )
     return rows
@@ -581,17 +619,7 @@ def _parameter_rows_for_tree(
     else:
         shape = template_shapes.get(parameter.field_name) if template_shapes else None
         sequence = _parameter_sequence(parameter) or fallback_sequence
-        rows.append(
-            (
-                "detail",
-                [
-                    sequence,
-                    parameter.field_name,
-                    parameter.data_type,
-                    _format_parameter_description(parameter),
-                ],
-            )
-        )
+        rows.append(_parameter_detail_row(parameter, sequence))
         child_base_sequence = sequence
     for index, child in enumerate(children_by_parent.get(parameter.id or 0, []), start=1):
         child_sequence = _parameter_sequence(child) or f"{child_base_sequence}.{index}"
@@ -605,6 +633,26 @@ def _parameter_rows_for_tree(
             )
         )
     return rows
+
+
+def _parameter_detail_row(parameter: ApiParameter, sequence: str) -> tuple[str, list[str]]:
+    return (
+        "detail",
+        [
+            sequence,
+            parameter.field_name,
+            parameter.data_type,
+            _format_parameter_description(parameter),
+        ],
+    )
+
+
+def _node_group_title(parameter: ApiParameter) -> str:
+    data_type = parameter.data_type.strip()
+    match = re.match(r"^(?:List|Array)\s*<\s*([^>]+?)\s*>$", data_type, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return data_type or parameter.field_name
 
 
 def _typed_parameter_rows(parameter_rows: list[list[str]]) -> list[tuple[str, list[str]]]:

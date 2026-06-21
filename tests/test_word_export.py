@@ -481,7 +481,7 @@ def test_word_export_preserves_nested_parameter_sequences(tmp_path: Path):
     assert "PanelId" in table_text
 
 
-def test_word_export_numbers_custom_children_under_parent_and_keeps_following_root_order(tmp_path: Path):
+def test_word_export_groups_custom_children_after_root_parameters(tmp_path: Path):
     interface = ApiInterface(
         id=1,
         code="EAP-EQP-010",
@@ -530,6 +530,10 @@ def test_word_export_numbers_custom_children_under_parent_and_keeps_following_ro
     assert sequence_by_field["QTY"] == "4.5.3"
     assert sequence_by_field["TaskQty"] == "4.6"
     assert sequence_by_field["IsControlExpiration"] == "4.7"
+    visible_rows = [row[0] if len(row) == 1 else row[1] for row in rows]
+    assert visible_rows.index("StackUpDetail") < visible_rows.index("TaskQty")
+    assert visible_rows.index("IsControlExpiration") < visible_rows.index("StackUp")
+    assert visible_rows.index("StackUp") < visible_rows.index("PPSequence")
 
 
 def test_word_export_merges_content_and_group_rows_compactly(tmp_path: Path):
