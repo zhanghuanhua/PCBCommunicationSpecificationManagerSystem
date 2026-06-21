@@ -63,6 +63,15 @@
     </div>
   </section>
 
+  {% set node_parent_name = "request_node_parent_key" %}
+  {% set node_field_name = "request_node_field_name" %}
+  {% set node_data_type_choice_name = "request_node_data_type_choice" %}
+  {% set node_custom_data_type_name = "request_node_custom_data_type" %}
+  {% set node_example_value_name = "request_node_example_value" %}
+  {% set node_description_name = "request_node_description" %}
+  {% set node_template_id = "request-node-card-template" %}
+  {% include "parameter_node_card.html" %}
+
   <section class="new-interface-panel batch-parameter-section parameter-table-section" data-batch-parameter-section data-row-template-id="request-parameter-row-template">
     <div class="section-heading">
       <div>
@@ -94,11 +103,30 @@
       </table>
     </div>
     <p class="parameter-table-note">空字段名的行保存时自动忽略。</p>
+    <div class="custom-node-area" data-node-area data-kind-prefix="request" data-node-template-id="request-node-card-template">
+      <div class="custom-node-area-title">
+        <div>
+          <h2>请求参数自定义节点</h2>
+          <p>当上方参数选择自定义并填写类型后，在这里维护对应节点参数。</p>
+        </div>
+      </div>
+      <div class="custom-node-list" data-node-list></div>
+      <p class="empty-node-tip" data-empty-node-tip>暂无自定义节点。选择“自定义”并填写例如 List&lt;StackUp&gt; 后自动显示。</p>
+    </div>
     <div class="checkbox-row">
       <input type="hidden" name="request_required" value="1">
       <input type="hidden" name="request_is_array" value="0">
     </div>
   </section>
+
+  {% set node_parent_name = "response_node_parent_key" %}
+  {% set node_field_name = "response_node_field_name" %}
+  {% set node_data_type_choice_name = "response_node_data_type_choice" %}
+  {% set node_custom_data_type_name = "response_node_custom_data_type" %}
+  {% set node_example_value_name = "response_node_example_value" %}
+  {% set node_description_name = "response_node_description" %}
+  {% set node_template_id = "response-node-card-template" %}
+  {% include "parameter_node_card.html" %}
 
   <section class="new-interface-panel batch-parameter-section parameter-table-section" data-batch-parameter-section data-row-template-id="response-parameter-row-template">
     <div class="section-heading">
@@ -131,6 +159,16 @@
       </table>
     </div>
     <p class="parameter-table-note">空字段名的行保存时自动忽略。</p>
+    <div class="custom-node-area" data-node-area data-kind-prefix="response" data-node-template-id="response-node-card-template">
+      <div class="custom-node-area-title">
+        <div>
+          <h2>响应参数自定义节点</h2>
+          <p>响应参数的自定义节点会挂到对应响应父字段下面。</p>
+        </div>
+      </div>
+      <div class="custom-node-list" data-node-list></div>
+      <p class="empty-node-tip" data-empty-node-tip>暂无自定义节点。选择“自定义”并填写例如 List&lt;ErrorInfo&gt; 后自动显示。</p>
+    </div>
     <div class="checkbox-row">
       <input type="hidden" name="response_required" value="1">
       <input type="hidden" name="response_is_array" value="0">

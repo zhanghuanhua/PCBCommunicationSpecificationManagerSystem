@@ -1,0 +1,55 @@
+<template id="{{ node_template_id }}">
+  <section class="custom-node-card" data-node-card>
+    <div class="custom-node-card-header">
+      <div>
+        <strong data-node-title>节点参数</strong>
+        <span data-node-meta></span>
+      </div>
+      <button class="button secondary small-button" type="button" data-add-node-row>新增一行</button>
+    </div>
+    <div class="batch-parameter-table-scroll">
+      <table class="batch-parameter-table custom-node-table">
+        <thead>
+          <tr>
+            <th class="seq-column">序号</th>
+            <th class="field-column">字段名</th>
+            <th class="type-column">类型</th>
+            <th class="custom-type-column">自定义类型</th>
+            <th class="example-column">示例值</th>
+            <th class="description-column">字段说明</th>
+            <th class="action-column">操作</th>
+          </tr>
+        </thead>
+        <tbody data-node-parameter-list>
+          <tr data-node-row>
+            <td class="seq-cell" data-node-row-index></td>
+            <td>
+              <input type="hidden" name="{{ node_parent_name }}" data-node-parent-input>
+              <input name="{{ node_field_name }}" placeholder="例如 LayerNo">
+            </td>
+            <td>
+              <select name="{{ node_data_type_choice_name }}">
+                {% for type_option in parameter_type_options %}
+                <option value="{{ type_option }}">{{ type_option }}</option>
+                {% endfor %}
+                <option value="CUSTOM">自定义</option>
+              </select>
+            </td>
+            <td>
+              <input name="{{ node_custom_data_type_name }}" placeholder="例如 List&lt;Data&gt;">
+            </td>
+            <td>
+              <input name="{{ node_example_value_name }}" placeholder="例如 1">
+            </td>
+            <td class="description-cell">
+              <textarea class="auto-grow-textarea" name="{{ node_description_name }}" placeholder="字段用途说明"></textarea>
+            </td>
+            <td class="action-cell">
+              <button class="small-button danger" type="button" data-remove-node-row>删除</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</template>

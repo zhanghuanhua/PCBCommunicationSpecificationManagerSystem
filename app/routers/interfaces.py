@@ -30,6 +30,7 @@ def create_interface(
     service_description: str = Form(""),
     version: str = Form("4.0"),
     module: str = Form(""),
+    request_row_key: Annotated[list[str], Form()] = [],
     request_field_name: Annotated[list[str], Form()] = [],
     request_data_type_choice: Annotated[list[str], Form()] = [],
     request_custom_data_type: Annotated[list[str], Form()] = [],
@@ -37,6 +38,13 @@ def create_interface(
     request_description: Annotated[list[str], Form()] = [],
     request_required: Annotated[list[str], Form()] = [],
     request_is_array: Annotated[list[str], Form()] = [],
+    request_node_parent_key: Annotated[list[str], Form()] = [],
+    request_node_field_name: Annotated[list[str], Form()] = [],
+    request_node_data_type_choice: Annotated[list[str], Form()] = [],
+    request_node_custom_data_type: Annotated[list[str], Form()] = [],
+    request_node_example_value: Annotated[list[str], Form()] = [],
+    request_node_description: Annotated[list[str], Form()] = [],
+    response_row_key: Annotated[list[str], Form()] = [],
     response_field_name: Annotated[list[str], Form()] = [],
     response_data_type_choice: Annotated[list[str], Form()] = [],
     response_custom_data_type: Annotated[list[str], Form()] = [],
@@ -44,6 +52,12 @@ def create_interface(
     response_description: Annotated[list[str], Form()] = [],
     response_required: Annotated[list[str], Form()] = [],
     response_is_array: Annotated[list[str], Form()] = [],
+    response_node_parent_key: Annotated[list[str], Form()] = [],
+    response_node_field_name: Annotated[list[str], Form()] = [],
+    response_node_data_type_choice: Annotated[list[str], Form()] = [],
+    response_node_custom_data_type: Annotated[list[str], Form()] = [],
+    response_node_example_value: Annotated[list[str], Form()] = [],
+    response_node_description: Annotated[list[str], Form()] = [],
     session: Session = Depends(get_session),
 ):
     spec_version = session.get(SpecVersion, spec_version_id) if spec_version_id else _latest_spec_version(session)
@@ -70,7 +84,7 @@ def create_interface(
     )
     session.add(interface)
     session.flush()
-    _add_parameters_from_new_form(
+    request_parent_map = _add_parameters_from_new_form(
         interface.id or 0,
         ParameterKind.REQUEST,
         request_field_name,
@@ -81,8 +95,21 @@ def create_interface(
         request_required,
         request_is_array,
         session,
+        row_keys=request_row_key,
     )
-    _add_parameters_from_new_form(
+    _add_node_parameters_from_new_form(
+        interface.id or 0,
+        ParameterKind.REQUEST,
+        request_parent_map,
+        request_node_parent_key,
+        request_node_field_name,
+        request_node_data_type_choice,
+        request_node_custom_data_type,
+        request_node_example_value,
+        request_node_description,
+        session,
+    )
+    response_parent_map = _add_parameters_from_new_form(
         interface.id or 0,
         ParameterKind.RESPONSE,
         response_field_name,
@@ -92,6 +119,19 @@ def create_interface(
         response_description,
         response_required,
         response_is_array,
+        session,
+        row_keys=response_row_key,
+    )
+    _add_node_parameters_from_new_form(
+        interface.id or 0,
+        ParameterKind.RESPONSE,
+        response_parent_map,
+        response_node_parent_key,
+        response_node_field_name,
+        response_node_data_type_choice,
+        response_node_custom_data_type,
+        response_node_example_value,
+        response_node_description,
         session,
     )
     session.commit()
@@ -362,31 +402,81 @@ def _add_parameters_from_new_form(
     array_flags: list[str],
     session: Session,
     start_order: int = 1,
-) -> int:
+    row_keys: list[str] | None = None,
+) -> dict[str, int] | int:
     added = 0
+    row_key_to_parameter_id: dict[str, int] = {}
     for index, field_name in enumerate(field_names):
         field_name = field_name.strip()
         if not field_name:
             continue
+        parameter = ApiParameter(
+            interface_id=interface_id,
+            kind=kind,
+            sort_order=start_order + added,
+            field_name=field_name,
+            data_type=_resolve_data_type(
+                "",
+                _list_value(data_type_choices, index, "string"),
+                _list_value(custom_data_types, index),
+            ),
+            required=_list_value(required_flags, index, "1") == "1",
+            is_array=_list_value(array_flags, index, "0") == "1",
+            example_value=_list_value(example_values, index),
+            description=_list_value(descriptions, index, field_name),
+        )
+        session.add(parameter)
+        session.flush()
+        row_key = _list_value(row_keys or [], index)
+        if row_key and parameter.id is not None:
+            row_key_to_parameter_id[row_key] = parameter.id
+        added += 1
+    if row_keys is not None:
+        return row_key_to_parameter_id
+    return added
+
+
+def _add_node_parameters_from_new_form(
+    interface_id: int,
+    kind: ParameterKind,
+    parent_map: dict[str, int] | int,
+    parent_keys: list[str],
+    field_names: list[str],
+    data_type_choices: list[str],
+    custom_data_types: list[str],
+    example_values: list[str],
+    descriptions: list[str],
+    session: Session,
+) -> None:
+    if not isinstance(parent_map, dict):
+        return
+    sort_orders_by_parent: dict[int, int] = {}
+    for index, field_name in enumerate(field_names):
+        field_name = field_name.strip()
+        if not field_name:
+            continue
+        parent_id = parent_map.get(_list_value(parent_keys, index))
+        if not parent_id:
+            continue
+        sort_orders_by_parent[parent_id] = sort_orders_by_parent.get(parent_id, 0) + 1
         session.add(
             ApiParameter(
                 interface_id=interface_id,
                 kind=kind,
-                sort_order=start_order + added,
+                parent_id=parent_id,
+                sort_order=sort_orders_by_parent[parent_id],
                 field_name=field_name,
                 data_type=_resolve_data_type(
                     "",
                     _list_value(data_type_choices, index, "string"),
                     _list_value(custom_data_types, index),
                 ),
-                required=_list_value(required_flags, index, "1") == "1",
-                is_array=_list_value(array_flags, index, "0") == "1",
+                required=True,
+                is_array=False,
                 example_value=_list_value(example_values, index),
                 description=_list_value(descriptions, index, field_name),
             )
         )
-        added += 1
-    return added
 
 
 def _list_value(values: list[str], index: int, default: str = "") -> str:

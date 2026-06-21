@@ -403,6 +403,10 @@ def test_new_interface_page_shows_create_form():
     assert "batch-parameter-table" in response.text
     assert "字段说明" in response.text
     assert "auto-grow-textarea" in response.text
+    assert "请求参数自定义节点" in response.text
+    assert "响应参数自定义节点" in response.text
+    assert 'name="request_row_key"' in response.text
+    assert 'name="request_node_parent_key"' in response.text
     assert "request-parameter-row-template" in response.text
     assert "response-parameter-row-template" in response.text
     assert "新增一行" in response.text
@@ -523,6 +527,90 @@ def test_create_interface_can_save_multiple_parameters_from_new_page(tmp_path):
     assert [parameter.field_name for parameter in parameters] == ["LotId", "PanelId", "Result", "Message"]
     assert [parameter.sort_order for parameter in parameters] == [1, 2, 1, 2]
     assert parameters[1].data_type == "List<Panel>"
+
+
+def test_create_interface_can_save_custom_node_parameters_from_new_page(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.2")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/interfaces",
+            data={
+                "spec_version_id": str(spec_version_id),
+                "direction": "EAP_TO_EQP",
+                "code": "EAP-EQP-120",
+                "name": "自定义节点接口",
+                "api_name": "EAP_CustomNodeReport",
+                "version": "4.2",
+                "request_row_key": ["req-a", "req-stack"],
+                "request_field_name": ["EqpId", "StackUpDetail"],
+                "request_data_type_choice": ["string", "CUSTOM"],
+                "request_custom_data_type": ["", "List<StackUp>"],
+                "request_example_value": ["EQ01", ""],
+                "request_description": ["设备ID", "叠构"],
+                "request_node_parent_key": ["req-stack", "req-stack"],
+                "request_node_field_name": ["LayerNo", "Material"],
+                "request_node_data_type_choice": ["Int", "string"],
+                "request_node_custom_data_type": ["", ""],
+                "request_node_example_value": ["1", "Core"],
+                "request_node_description": ["层序号", "材料名称"],
+                "response_row_key": ["rsp-result", "rsp-error"],
+                "response_field_name": ["Result", "ErrorList"],
+                "response_data_type_choice": ["bool", "CUSTOM"],
+                "response_custom_data_type": ["", "List<ErrorInfo>"],
+                "response_example_value": ["true", ""],
+                "response_description": ["执行结果", "错误明细"],
+                "response_node_parent_key": ["rsp-error"],
+                "response_node_field_name": ["Code"],
+                "response_node_data_type_choice": ["string"],
+                "response_node_custom_data_type": [""],
+                "response_node_example_value": ["E001"],
+                "response_node_description": ["错误代码"],
+            },
+            follow_redirects=True,
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "StackUpDetail" in response.text
+    assert "LayerNo" in response.text
+    assert "ErrorList" in response.text
+    assert "E001" in response.text
+    with Session(engine) as session:
+        interface = session.exec(select(ApiInterface).where(ApiInterface.code == "EAP-EQP-120")).one()
+        parameters = session.exec(
+            select(ApiParameter)
+            .where(ApiParameter.interface_id == interface.id)
+            .order_by(ApiParameter.kind, ApiParameter.parent_id, ApiParameter.sort_order)
+        ).all()
+        stack_parent = next(parameter for parameter in parameters if parameter.field_name == "StackUpDetail")
+        stack_children = [parameter for parameter in parameters if parameter.parent_id == stack_parent.id]
+        error_parent = next(parameter for parameter in parameters if parameter.field_name == "ErrorList")
+        error_children = [parameter for parameter in parameters if parameter.parent_id == error_parent.id]
+        session.refresh(interface)
+        request_log = interface.request_log_example
+        response_log = interface.response_log_example
+    assert [parameter.field_name for parameter in stack_children] == ["LayerNo", "Material"]
+    assert [parameter.field_name for parameter in error_children] == ["Code"]
+    assert '"StackUpDetail": [' in request_log
+    assert '"LayerNo": 1' in request_log
+    assert '"Material": "Core"' in request_log
+    assert '"ErrorList": [' in response_log
+    assert '"Code": "E001"' in response_log
 
 
 def test_import_spec_page_shows_template_import_placeholder():
