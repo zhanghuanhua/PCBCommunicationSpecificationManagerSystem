@@ -166,6 +166,34 @@ def test_home_page_stays_empty_after_all_versions_are_deleted(tmp_path):
     assert "进入管理" not in response.text
 
 
+def test_home_page_orders_versions_newest_first_and_places_version_in_stats(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        for version in ["4.0", "4.2", "4.1"]:
+            session.add(SpecVersion(version=version, name="超毅项目Web API通讯规格书"))
+        session.commit()
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.get("/")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    text = response.text
+    assert text.index("超毅项目Web API通讯规格书 v4.2") < text.index("超毅项目Web API通讯规格书 v4.1")
+    assert text.index("超毅项目Web API通讯规格书 v4.1") < text.index("超毅项目Web API通讯规格书 v4.0")
+    assert "<span>版本</span>" in text
+    assert "<strong>v4.2</strong>" in text
+    assert "Version 4.2" not in text
+
+
 def test_spec_workspace_shows_interface_workspace_actions(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(engine)

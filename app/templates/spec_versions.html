@@ -18,7 +18,6 @@
   <article class="spec-version-card">
     <div class="spec-card-header">
       <div>
-        <p class="eyebrow">Version {{ spec.version }}</p>
         <h2>{{ spec.name }} v{{ spec.version }}</h2>
         <p>{{ spec.original_filename or "系统默认版本" }}</p>
       </div>
@@ -31,6 +30,7 @@
       <div><span>EQP -> EAP</span><strong>{{ card.eqp_to_eap }}</strong></div>
       <div><span>EAP -> EQP</span><strong>{{ card.eap_to_eqp }}</strong></div>
       <div><span>草稿</span><strong>{{ card.draft }}</strong></div>
+      <div><span>版本</span><strong>v{{ spec.version }}</strong></div>
     </div>
     <div class="spec-card-actions">
       <a class="button" href="/specs/{{ spec.id }}">进入管理</a>

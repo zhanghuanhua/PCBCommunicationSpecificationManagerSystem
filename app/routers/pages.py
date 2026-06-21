@@ -24,7 +24,8 @@ def specs_home(
     request: Request,
     session: Session = Depends(get_session),
 ):
-    spec_versions = session.exec(select(SpecVersion).order_by(SpecVersion.created_at.desc())).all()
+    spec_versions = session.exec(select(SpecVersion)).all()
+    spec_versions = sorted(spec_versions, key=_version_sort_key, reverse=True)
     cards = []
     for spec in spec_versions:
         interfaces = session.exec(
@@ -119,6 +120,16 @@ def _matches_direction(interface: ApiInterface, direction: str) -> bool:
     if direction == "all":
         return True
     return _effective_direction(interface).value == direction
+
+
+def _version_sort_key(spec_version: SpecVersion) -> tuple:
+    parts = []
+    for part in spec_version.version.split("."):
+        try:
+            parts.append(int(part))
+        except ValueError:
+            parts.append(0)
+    return (*parts, spec_version.created_at)
 
 
 def _effective_direction(interface: ApiInterface) -> InterfaceDirection:
