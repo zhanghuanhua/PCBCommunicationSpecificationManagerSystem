@@ -7,6 +7,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from app.database import get_session
 from app.main import app
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind, SpecTemplate, SpecVersion
+from app.models import InterfaceStatus
 from app.routers import exports as exports_router
 from app.services.pdf_export import PdfConversionError
 
@@ -141,6 +142,48 @@ def test_export_center_uses_imported_template_for_word(tmp_path):
     assert "原规格书标题" in body_text
     assert "原规格书已有章节" in body_text
     assert "接口内容" in body_text
+
+
+def test_word_export_marks_current_version_interfaces_published(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.2")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        interface = ApiInterface(
+            spec_version_id=spec_version.id,
+            code="EAP-EQP-012",
+            name="裁切任务下发",
+            direction=InterfaceDirection.EAP_TO_EQP,
+            api_name="EAP_PPCuttingInfoSend",
+            caller="EAP",
+            provider="EQP",
+            status=InterfaceStatus.DRAFT,
+        )
+        session.add(interface)
+        session.commit()
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={"export_format": "word", "spec_version_id": str(spec_version_id), "target_version": "4.2"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    with Session(engine) as session:
+        exported_interface = session.exec(select(ApiInterface)).one()
+    assert exported_interface.status == InterfaceStatus.PUBLISHED
 
 
 def test_export_result_page_provides_download_links():
@@ -533,6 +576,53 @@ def test_export_as_new_version_saves_version_record(tmp_path):
 
     assert [item.version for item in versions] == ["4.0", "4.1"]
     assert copied.code == "EQP-EAP-001"
+
+
+def test_word_export_as_new_version_marks_copied_interfaces_published(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        spec_version = SpecVersion(version="4.0")
+        session.add(spec_version)
+        session.commit()
+        session.refresh(spec_version)
+        session.add(
+            ApiInterface(
+                spec_version_id=spec_version.id,
+                code="EQP-EAP-001",
+                name="连线检查",
+                direction=InterfaceDirection.EQP_TO_EAP,
+                api_name="EQP_AliveCheck",
+                caller="EQP",
+                provider="EAP",
+                status=InterfaceStatus.DRAFT,
+            )
+        )
+        session.commit()
+        spec_version_id = spec_version.id
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/exports",
+            data={"export_format": "word", "spec_version_id": str(spec_version_id), "target_version": "4.1"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    with Session(engine) as session:
+        target = session.exec(select(SpecVersion).where(SpecVersion.version == "4.1")).one()
+        copied = session.exec(select(ApiInterface).where(ApiInterface.spec_version_id == target.id)).one()
+        source = session.exec(select(ApiInterface).where(ApiInterface.spec_version_id == spec_version_id)).one()
+    assert copied.status == InterfaceStatus.PUBLISHED
+    assert copied.version == "4.1"
+    assert source.status == InterfaceStatus.DRAFT
 
 
 def test_export_as_new_version_remaps_parameter_parent_ids(tmp_path):

@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, delete, select
 
 from app.database import get_session
-from app.models import ApiInterface, ApiParameter, ExportRecord, SpecTemplate, SpecVersion
+from app.models import ApiInterface, ApiParameter, ExportRecord, InterfaceStatus, SpecTemplate, SpecVersion
 from app.services.examples import build_request_example, build_response_example
 from app.services.markdown_export import render_markdown_document
 from app.services.pdf_export import PdfConversionError, export_pdf_document
@@ -189,7 +189,10 @@ def run_export(
         source=spec_version,
         target_version=export_version,
         output_files=output_files,
+        publish_interfaces=_exports_publish_interfaces(export_format),
     )
+    if saved_spec_version.id == spec_version.id and _exports_publish_interfaces(export_format):
+        _mark_version_interfaces_published(session, saved_spec_version.id or 0)
     session.commit()
 
     return templates.TemplateResponse(
@@ -330,6 +333,7 @@ def _save_exported_spec_version(
     source: SpecVersion,
     target_version: str,
     output_files: list[str],
+    publish_interfaces: bool = False,
 ) -> SpecVersion:
     if target_version == source.version:
         source.status = "EXPORTED"
@@ -339,7 +343,7 @@ def _save_exported_spec_version(
 
     existing = session.exec(select(SpecVersion).where(SpecVersion.version == target_version)).first()
     if existing:
-        _replace_version_interfaces(session, source, existing)
+        _replace_version_interfaces(session, source, existing, publish_interfaces)
         existing.status = "EXPORTED"
         existing.template_path = source.template_path
         existing.original_filename = Path(output_files[0]).name if output_files else source.original_filename
@@ -358,11 +362,16 @@ def _save_exported_spec_version(
     )
     session.add(target)
     session.flush()
-    _copy_version_interfaces(session, source, target)
+    _copy_version_interfaces(session, source, target, publish_interfaces)
     return target
 
 
-def _replace_version_interfaces(session: Session, source: SpecVersion, target: SpecVersion) -> None:
+def _replace_version_interfaces(
+    session: Session,
+    source: SpecVersion,
+    target: SpecVersion,
+    publish_interfaces: bool = False,
+) -> None:
     existing_interfaces = session.exec(
         select(ApiInterface).where(ApiInterface.spec_version_id == target.id)
     ).all()
@@ -370,10 +379,15 @@ def _replace_version_interfaces(session: Session, source: SpecVersion, target: S
         session.exec(delete(ApiParameter).where(ApiParameter.interface_id == interface.id))
         session.delete(interface)
     session.flush()
-    _copy_version_interfaces(session, source, target)
+    _copy_version_interfaces(session, source, target, publish_interfaces)
 
 
-def _copy_version_interfaces(session: Session, source: SpecVersion, target: SpecVersion) -> None:
+def _copy_version_interfaces(
+    session: Session,
+    source: SpecVersion,
+    target: SpecVersion,
+    publish_interfaces: bool = False,
+) -> None:
     source_interfaces = session.exec(
         select(ApiInterface).where(ApiInterface.spec_version_id == source.id).order_by(ApiInterface.code)
     ).all()
@@ -394,7 +408,7 @@ def _copy_version_interfaces(session: Session, source: SpecVersion, target: Spec
             service_description=interface.service_description,
             version=target.version,
             module=interface.module,
-            status=interface.status,
+            status=InterfaceStatus.PUBLISHED if publish_interfaces else interface.status,
             remark=interface.remark,
             request_log_example=interface.request_log_example,
             response_log_example=interface.response_log_example,
@@ -444,6 +458,20 @@ def _copy_version_interfaces(session: Session, source: SpecVersion, target: Spec
             indent=4,
         )
         session.add(copied)
+
+
+def _exports_publish_interfaces(export_format: str) -> bool:
+    return export_format in {"word", "pdf", "word_pdf", "all"}
+
+
+def _mark_version_interfaces_published(session: Session, spec_version_id: int) -> None:
+    interfaces = session.exec(
+        select(ApiInterface).where(ApiInterface.spec_version_id == spec_version_id)
+    ).all()
+    for interface in interfaces:
+        interface.status = InterfaceStatus.PUBLISHED
+        interface.updated_at = datetime.now()
+        session.add(interface)
 
 
 def _normalize_data_type(data_type: str) -> str:
