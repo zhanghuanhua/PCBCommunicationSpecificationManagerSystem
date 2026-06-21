@@ -282,8 +282,8 @@ def test_word_export_includes_formal_parameter_tables_and_saved_log_examples(tmp
     assert "返回值列表" in table_text
     assert "日志范例" in table_text
     assert "REST:POST http://IP:Port/api/EAP_InitialDataRequest" in table_text
-    assert '"IP":"127.0.0.1"' in table_text
-    assert '"Result":true' in table_text
+    assert '"IP": "127.0.0.1"' in table_text
+    assert '"Result": true' in table_text
     assert "字段" in table_text
     assert "IP" in table_text
     assert "string" in table_text
@@ -479,6 +479,57 @@ def test_word_export_preserves_nested_parameter_sequences(tmp_path: Path):
     assert "4.6.1.1" in table_text
     assert "NgPanelList" in table_text
     assert "PanelId" in table_text
+
+
+def test_word_export_numbers_custom_children_under_parent_and_keeps_following_root_order(tmp_path: Path):
+    interface = ApiInterface(
+        id=1,
+        code="EAP-EQP-010",
+        name="开料信息下发",
+        direction=InterfaceDirection.EAP_TO_EQP,
+        api_name="EAP_PPCuttingInfoSend",
+        caller="EAP",
+        provider="EQP",
+    )
+    parameters = [
+        ApiParameter(id=1, interface_id=1, kind=ParameterKind.REQUEST, sort_order=1, field_name="EqpId", data_type="string", description="设备 ID"),
+        ApiParameter(id=2, interface_id=1, kind=ParameterKind.REQUEST, sort_order=2, field_name="JobId", data_type="string", description="任务名称"),
+        ApiParameter(id=3, interface_id=1, kind=ParameterKind.REQUEST, sort_order=3, field_name="PNLLength", data_type="float", description="PNL长"),
+        ApiParameter(id=4, interface_id=1, kind=ParameterKind.REQUEST, sort_order=4, field_name="PNLWidth", data_type="float", description="PNL宽"),
+        ApiParameter(id=5, interface_id=1, kind=ParameterKind.REQUEST, sort_order=5, field_name="StackUpDetail", data_type="List<StackUp>", description="叠构"),
+        ApiParameter(id=6, interface_id=1, kind=ParameterKind.REQUEST, parent_id=5, sort_order=1, field_name="PPSequence", data_type="int", description="顺序号"),
+        ApiParameter(id=7, interface_id=1, kind=ParameterKind.REQUEST, parent_id=5, sort_order=2, field_name="MaterialPartCode", data_type="string", description="物料编码"),
+        ApiParameter(id=8, interface_id=1, kind=ParameterKind.REQUEST, parent_id=5, sort_order=3, field_name="QTY", data_type="int", description="任务数(裁多少套),"),
+        ApiParameter(id=9, interface_id=1, kind=ParameterKind.REQUEST, sort_order=6, field_name="TaskQty", data_type="int", description="任务数(裁多少套)，可设备端修改数量"),
+        ApiParameter(id=10, interface_id=1, kind=ParameterKind.REQUEST, sort_order=7, field_name="IsControlExpiration", data_type="int", description="是否管控有效期：1:管控，0:不管控"),
+    ]
+    output = tmp_path / "custom_children.docx"
+
+    export_word_document(
+        output,
+        [interface],
+        {1: {"Content": {"StackUpDetail": [{"PPSequence": 0, "MaterialPartCode": "", "QTY": 0}]}}},
+        {1: {"Content": {}}},
+        parameters_by_interface={1: parameters},
+    )
+
+    document = Document(output)
+    rows = [
+        [
+            "\n".join(node.text or "" for node in tc.iter() if node.tag.endswith("t")).strip()
+            for tc in row._tr.tc_lst
+        ]
+        for table in document.tables
+        if len(table.columns) == 4
+        for row in table.rows
+    ]
+    sequence_by_field = {row[1]: row[0] for row in rows if len(row) >= 4 and row[1]}
+    assert sequence_by_field["StackUpDetail"] == "4.5"
+    assert sequence_by_field["PPSequence"] == "4.5.1"
+    assert sequence_by_field["MaterialPartCode"] == "4.5.2"
+    assert sequence_by_field["QTY"] == "4.5.3"
+    assert sequence_by_field["TaskQty"] == "4.6"
+    assert sequence_by_field["IsControlExpiration"] == "4.7"
 
 
 def test_word_export_merges_content_and_group_rows_compactly(tmp_path: Path):

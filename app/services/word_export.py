@@ -534,28 +534,74 @@ def _parameter_rows(
     kind: ParameterKind,
     template_shapes: dict[str, str] | None = None,
 ) -> list[tuple[str, list[str]]]:
-    rows: list[tuple[str, list[str]]] = []
     items = [
         parameter
         for parameter in sorted(parameters, key=lambda item: (item.sort_order, item.id or 0))
         if parameter.kind == kind
     ]
-    for index, parameter in enumerate(items, start=1):
+    item_ids = {parameter.id for parameter in items if parameter.id is not None}
+    children_by_parent = _children_by_parent(items)
+    child_ids = {
+        child.id
+        for children in children_by_parent.values()
+        for child in children
+        if child.id is not None
+    }
+    root_items = [parameter for parameter in items if parameter.id not in child_ids]
+    rows: list[tuple[str, list[str]]] = []
+    for index, parameter in enumerate(root_items, start=1):
+        fallback_sequence = _parameter_sequence(parameter) or f"4.{index}"
+        rows.extend(
+            _parameter_rows_for_tree(
+                parameter,
+                fallback_sequence,
+                children_by_parent,
+                template_shapes or {},
+                attached_to_parent=False,
+            )
+        )
+    return rows
+
+
+def _parameter_rows_for_tree(
+    parameter: ApiParameter,
+    fallback_sequence: str,
+    children_by_parent: dict[int, list[ApiParameter]],
+    template_shapes: dict[str, str],
+    attached_to_parent: bool,
+) -> list[tuple[str, list[str]]]:
+    rows: list[tuple[str, list[str]]] = []
+    if _is_group_parameter(parameter, template_shapes):
+        if not attached_to_parent and not children_by_parent.get(parameter.id or 0):
+            return rows
+        shape = template_shapes.get(parameter.field_name)
+        row_kind = "detail" if shape == "detail" else "merged"
+        rows.append((row_kind, [parameter.field_name, "", "", ""]))
+        child_base_sequence = _parameter_sequence(parameter) or fallback_sequence
+    else:
         shape = template_shapes.get(parameter.field_name) if template_shapes else None
-        if _is_group_marker_parameter(parameter):
-            row_kind = "detail" if shape == "detail" else "merged"
-            rows.append((row_kind, [parameter.field_name, "", "", ""]))
-            continue
-        sequence = _parameter_sequence(parameter) or f"4.{index}"
+        sequence = _parameter_sequence(parameter) or fallback_sequence
         rows.append(
             (
                 "detail",
                 [
-                sequence,
-                parameter.field_name,
-                parameter.data_type,
-                _format_parameter_description(parameter),
+                    sequence,
+                    parameter.field_name,
+                    parameter.data_type,
+                    _format_parameter_description(parameter),
                 ],
+            )
+        )
+        child_base_sequence = sequence
+    for index, child in enumerate(children_by_parent.get(parameter.id or 0, []), start=1):
+        child_sequence = _parameter_sequence(child) or f"{child_base_sequence}.{index}"
+        rows.extend(
+            _parameter_rows_for_tree(
+                child,
+                child_sequence,
+                children_by_parent,
+                template_shapes,
+                attached_to_parent=True,
             )
         )
     return rows
@@ -582,12 +628,16 @@ def _children_by_parent(parameters: list[ApiParameter]) -> dict[int, list[ApiPar
         if (sequence := _parameter_sequence(parameter))
     }
     item_ids = {parameter.id for parameter in parameters if parameter.id is not None}
+    parameters_by_id = {parameter.id: parameter for parameter in parameters if parameter.id is not None}
     for parameter in parameters:
         parent_id = parameter.parent_id if parameter.parent_id in item_ids else None
         parent_sequence = _parameter_parent_sequence(parameter)
         if parent_id is None and parent_sequence:
             parent = by_sequence.get(parent_sequence)
             parent_id = parent.id if parent and parent.id is not None else None
+        parent = parameters_by_id.get(parent_id) if parent_id is not None else None
+        if parent and not _can_have_child_parameters(parent):
+            parent_id = None
         if parent_id is None:
             continue
         children.setdefault(parent_id, []).append(parameter)
@@ -622,8 +672,8 @@ def _parameter_tree_rows(
 
 def _fill_log_table(table: Table, interface: ApiInterface, request_example: dict, response_example: dict) -> None:
     _ensure_table_rows(table, 2)
-    request_text = interface.request_log_example or _format_request_log(interface, request_example)
-    response_text = interface.response_log_example or json.dumps(response_example, ensure_ascii=False, indent=2)
+    request_text = _format_request_log(interface, request_example)
+    response_text = json.dumps(response_example, ensure_ascii=False, indent=2)
     _set_row(table, 0, ["日志范例", "请求", request_text])
     _set_row(table, 1, ["日志范例", "应答", response_text])
     while len(table.rows) > 2:
@@ -757,6 +807,20 @@ def _is_group_parameter(parameter: ApiParameter, template_shapes: dict[str, str]
 def _is_group_marker_parameter(parameter: ApiParameter) -> bool:
     metadata = _parameter_metadata(parameter)
     return bool(metadata.get("is_group")) or not parameter.data_type.strip()
+
+
+def _can_have_child_parameters(parameter: ApiParameter) -> bool:
+    if _is_group_marker_parameter(parameter):
+        return True
+    data_type = parameter.data_type.strip().lower()
+    if not data_type:
+        return True
+    if data_type in {"object", "jsonobject", "list"}:
+        return True
+    if data_type.startswith("list<") or data_type.startswith("array<"):
+        return True
+    scalar_types = {"string", "str", "int", "integer", "float", "decimal", "double", "bool", "boolean", "datetime"}
+    return data_type not in scalar_types
 
 
 def _is_interface_table(table: Table) -> bool:
