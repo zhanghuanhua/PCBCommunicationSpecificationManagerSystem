@@ -61,7 +61,7 @@ document.addEventListener("click", (event) => {
 document.addEventListener("input", (event) => {
   const target = event.target;
   if (target.matches("[name$='_field_name'], [name$='_custom_data_type']")) {
-    syncCustomNodeArea(target.closest("[data-batch-parameter-section]"));
+    scheduleCustomNodeAreaSync(target.closest("[data-batch-parameter-section]"));
   }
 });
 
@@ -157,6 +157,19 @@ function syncCustomNodeArea(section) {
   if (emptyTip) {
     emptyTip.hidden = visibleCards > 0;
   }
+}
+
+function scheduleCustomNodeAreaSync(section) {
+  if (!section) {
+    return;
+  }
+  if (section.nodeSyncTimer) {
+    window.clearTimeout(section.nodeSyncTimer);
+  }
+  section.nodeSyncTimer = window.setTimeout(() => {
+    section.nodeSyncTimer = null;
+    syncCustomNodeArea(section);
+  }, 180);
 }
 
 function updateNodeCard(card, parent) {

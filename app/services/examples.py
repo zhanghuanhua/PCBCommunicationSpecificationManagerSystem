@@ -1,30 +1,45 @@
+from datetime import datetime
 from typing import Any
 
 from app.models import ApiInterface, ApiParameter, ParameterKind
 
 
-DEFAULT_DATETIME = "2024/11/27 15:00:00"
-DEFAULT_REQUEST_ID = "20250107121135343"
+def current_datetime_text(now: datetime | None = None) -> str:
+    return (now or datetime.now()).strftime("%Y/%m/%d %H:%M:%S")
 
 
-def build_request_example(interface: ApiInterface, parameters: list[ApiParameter]) -> dict[str, Any]:
+def current_request_id(now: datetime | None = None) -> str:
+    return (now or datetime.now()).strftime("%Y%m%d%H%M%S%f")[:17]
+
+
+def build_request_example(
+    interface: ApiInterface,
+    parameters: list[ApiParameter],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    generated_at = now or datetime.now()
     return {
         "From": interface.caller,
         "Message": interface.api_name,
-        "DateTime": DEFAULT_DATETIME,
+        "DateTime": current_datetime_text(generated_at),
         "Content": _build_content(parameters, ParameterKind.REQUEST),
-        "RequestId": DEFAULT_REQUEST_ID,
+        "RequestId": current_request_id(generated_at),
     }
 
 
-def build_response_example(interface: ApiInterface, parameters: list[ApiParameter]) -> dict[str, Any]:
+def build_response_example(
+    interface: ApiInterface,
+    parameters: list[ApiParameter],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    generated_at = now or datetime.now()
     return {
         "Code": "0000",
         "Success": True,
         "Msg": "",
-        "DateTime": DEFAULT_DATETIME,
+        "DateTime": current_datetime_text(generated_at),
         "Content": _build_content(parameters, ParameterKind.RESPONSE),
-        "RequestId": DEFAULT_REQUEST_ID,
+        "RequestId": current_request_id(generated_at),
     }
 
 

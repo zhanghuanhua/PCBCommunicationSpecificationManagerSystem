@@ -15,7 +15,7 @@ from app.services.examples import build_request_example, build_response_example
 
 router = APIRouter(prefix="/interfaces")
 templates = Jinja2Templates(directory="app/templates")
-PARAMETER_TYPE_OPTIONS = ["string", "list", "bool", "DateTime", "Int", "object"]
+PARAMETER_TYPE_OPTIONS = ["string", "list", "bool", "DateTime", "int", "float", "double", "object"]
 
 
 @router.post("")
@@ -397,7 +397,14 @@ def _resolve_data_type(data_type: str, data_type_choice: str, custom_data_type: 
         if not custom_type:
             raise HTTPException(status_code=400, detail="选择自定义时必须填写自定义类型")
         return custom_type
-    return (data_type_choice or data_type).strip()
+    return _normalize_data_type(data_type_choice or data_type)
+
+
+def _normalize_data_type(data_type: str) -> str:
+    normalized = data_type.strip()
+    if normalized.lower() == "int":
+        return "int"
+    return normalized
 
 
 def _direction_from_parties(

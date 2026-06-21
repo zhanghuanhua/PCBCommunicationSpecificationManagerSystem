@@ -410,6 +410,10 @@ def test_new_interface_page_shows_create_form():
     assert "request-parameter-row-template" in response.text
     assert "response-parameter-row-template" in response.text
     assert "新增一行" in response.text
+    assert '<option value="int">int</option>' in response.text
+    assert '<option value="float">float</option>' in response.text
+    assert '<option value="double">double</option>' in response.text
+    assert '<option value="Int">Int</option>' not in response.text
 
 
 def test_create_interface_can_save_parameters_from_new_page(tmp_path):
@@ -605,6 +609,7 @@ def test_create_interface_can_save_custom_node_parameters_from_new_page(tmp_path
         request_log = interface.request_log_example
         response_log = interface.response_log_example
     assert [parameter.field_name for parameter in stack_children] == ["LayerNo", "Material"]
+    assert stack_children[0].data_type == "int"
     assert [parameter.field_name for parameter in error_children] == ["Code"]
     assert '"StackUpDetail": [' in request_log
     assert '"LayerNo": 1' in request_log

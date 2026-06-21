@@ -20,6 +20,7 @@ def init_db() -> None:
     _ensure_version_columns()
     _remove_legacy_apiinterface_code_unique()
     _ensure_default_spec_version()
+    _normalize_parameter_data_types()
     _repair_cross_interface_parameter_parents()
     _repair_duplicate_interface_child_parameters()
 
@@ -158,6 +159,19 @@ def _ensure_default_spec_version() -> None:
                 item.version = existing_version.version
             session.add(item)
         session.commit()
+
+
+def _normalize_parameter_data_types() -> None:
+    with Session(engine) as session:
+        parameters = session.exec(select(ApiParameter)).all()
+        changed = False
+        for parameter in parameters:
+            if parameter.data_type.strip().lower() == "int" and parameter.data_type != "int":
+                parameter.data_type = "int"
+                session.add(parameter)
+                changed = True
+        if changed:
+            session.commit()
 
 
 def _repair_cross_interface_parameter_parents() -> None:

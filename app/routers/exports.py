@@ -87,12 +87,13 @@ def run_export(
         item.id or 0: [parameter for parameter in parameters if parameter.interface_id == item.id]
         for item in interfaces
     }
+    generated_at = datetime.now()
     request_examples = {
-        item.id or 0: build_request_example(item, parameters_by_interface[item.id or 0])
+        item.id or 0: build_request_example(item, parameters_by_interface[item.id or 0], now=generated_at)
         for item in interfaces
     }
     response_examples = {
-        item.id or 0: build_response_example(item, parameters_by_interface[item.id or 0])
+        item.id or 0: build_response_example(item, parameters_by_interface[item.id or 0], now=generated_at)
         for item in interfaces
     }
     output_files: list[str] = []
@@ -376,6 +377,7 @@ def _copy_version_interfaces(session: Session, source: SpecVersion, target: Spec
     source_interfaces = session.exec(
         select(ApiInterface).where(ApiInterface.spec_version_id == source.id).order_by(ApiInterface.code)
     ).all()
+    generated_at = datetime.now()
     for interface in source_interfaces:
         copied = ApiInterface(
             spec_version_id=target.id,
@@ -414,7 +416,7 @@ def _copy_version_interfaces(session: Session, source: SpecVersion, target: Spec
                 parent_id=None,
                 sort_order=parameter.sort_order,
                 field_name=parameter.field_name,
-                data_type=parameter.data_type,
+                data_type=_normalize_data_type(parameter.data_type),
                 required=parameter.required,
                 is_array=parameter.is_array,
                 example_value=parameter.example_value,
@@ -432,13 +434,23 @@ def _copy_version_interfaces(session: Session, source: SpecVersion, target: Spec
                 session.add(copied_parameter)
         session.flush()
         refreshed_parameters = [copied_parameter for _, copied_parameter in copied_parameters]
-        copied.request_log_example = _format_request_log(copied, build_request_example(copied, refreshed_parameters))
+        copied.request_log_example = _format_request_log(
+            copied,
+            build_request_example(copied, refreshed_parameters, now=generated_at),
+        )
         copied.response_log_example = json.dumps(
-            build_response_example(copied, refreshed_parameters),
+            build_response_example(copied, refreshed_parameters, now=generated_at),
             ensure_ascii=False,
             indent=4,
         )
         session.add(copied)
+
+
+def _normalize_data_type(data_type: str) -> str:
+    normalized = data_type.strip()
+    if normalized.lower() == "int":
+        return "int"
+    return normalized
 
 
 def _format_request_log(interface: ApiInterface, request_example: dict) -> str:

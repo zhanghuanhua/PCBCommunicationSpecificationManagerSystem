@@ -1,3 +1,6 @@
+import re
+from datetime import datetime
+
 from app.models import ApiInterface, ApiParameter, InterfaceDirection, ParameterKind
 from app.services.examples import build_request_example, build_response_example
 
@@ -27,9 +30,9 @@ def test_build_request_example_for_eqp_to_eap():
 
     assert result["From"] == "EQP"
     assert result["Message"] == "EQP_Test"
-    assert result["DateTime"] == "2024/11/27 15:00:00"
+    assert re.fullmatch(r"\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}", result["DateTime"])
     assert result["Content"]["EqpId"] == "EQ01"
-    assert result["RequestId"] == "20250107121135343"
+    assert re.fullmatch(r"\d{17}", result["RequestId"])
 
 
 def test_build_response_example_has_public_fields():
@@ -48,7 +51,24 @@ def test_build_response_example_has_public_fields():
     assert result["Success"] is True
     assert result["Msg"] == ""
     assert result["Content"] == {}
-    assert result["RequestId"] == "20250107121135343"
+    assert re.fullmatch(r"\d{17}", result["RequestId"])
+
+
+def test_build_examples_can_use_supplied_generation_time():
+    interface = ApiInterface(
+        code="EAP-EQP-012",
+        name="测试接口",
+        direction=InterfaceDirection.EAP_TO_EQP,
+        api_name="EAP_Test",
+        caller="EAP",
+        provider="EQP",
+    )
+    generated_at = datetime(2026, 6, 21, 20, 55, 12, 345000)
+
+    result = build_request_example(interface, [], now=generated_at)
+
+    assert result["DateTime"] == "2026/06/21 20:55:12"
+    assert result["RequestId"] == "20260621205512345"
 
 
 def test_build_example_converts_scalar_types_and_arrays():
