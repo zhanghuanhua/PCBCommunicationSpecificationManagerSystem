@@ -16,12 +16,11 @@ from app.services.examples import build_request_example, build_response_example
 from app.services.markdown_export import render_markdown_document
 from app.services.pdf_export import PdfConversionError, export_pdf_document
 from app.services.word_export import export_word_document
+from app.settings import EXPORT_DIR, EXPORT_SETTINGS_PATH
 
 
 router = APIRouter(prefix="/exports")
 templates = Jinja2Templates(directory="app/templates")
-EXPORT_DIR = Path("exports")
-EXPORT_SETTINGS_PATH = Path("data/export_settings.json")
 
 
 @router.get("")

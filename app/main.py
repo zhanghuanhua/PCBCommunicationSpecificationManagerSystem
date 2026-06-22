@@ -5,11 +5,13 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, init_db
 from app.routers import exports, imports, interfaces, pages
+from app.settings import ensure_runtime_dirs
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.engine = engine
+    ensure_runtime_dirs()
     init_db()
     yield
 

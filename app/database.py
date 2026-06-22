@@ -7,9 +7,10 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.models import ApiInterface, ApiParameter, SpecTemplate, SpecVersion
 from app.services.examples import build_request_example, build_response_example
+from app.settings import sqlite_database_url
 
 
-DATABASE_URL = "sqlite:///data/interface_manager.db"
+DATABASE_URL = sqlite_database_url()
 engine = create_engine(DATABASE_URL, echo=False)
 _PARENT_REPAIR_DONE = False
 

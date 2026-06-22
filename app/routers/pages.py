@@ -9,7 +9,6 @@ from app.models import (
     ApiParameter,
     ExportRecord,
     InterfaceDirection,
-    InterfaceStatus,
     SpecTemplate,
     SpecVersion,
 )
@@ -37,7 +36,6 @@ def specs_home(
                 "total": len(interfaces),
                 "eqp_to_eap": sum(1 for item in interfaces if _effective_direction(item) == InterfaceDirection.EQP_TO_EAP),
                 "eap_to_eqp": sum(1 for item in interfaces if _effective_direction(item) == InterfaceDirection.EAP_TO_EQP),
-                "draft": sum(1 for item in interfaces if item.status == InterfaceStatus.DRAFT),
             }
         )
     return templates.TemplateResponse(
@@ -98,7 +96,6 @@ def spec_workspace(
         "total": len(all_interfaces),
         "eqp_to_eap": sum(1 for item in all_interfaces if _effective_direction(item) == InterfaceDirection.EQP_TO_EAP),
         "eap_to_eqp": sum(1 for item in all_interfaces if _effective_direction(item) == InterfaceDirection.EAP_TO_EQP),
-        "draft": sum(1 for item in all_interfaces if item.status == InterfaceStatus.DRAFT),
     }
     return templates.TemplateResponse(
         request,

@@ -13,11 +13,10 @@ from starlette.status import HTTP_400_BAD_REQUEST
 from app.database import get_session
 from app.models import ApiInterface, ApiParameter, InterfaceStatus, SpecTemplate, SpecVersion
 from app.services.spec_parser import ParsedInterface, ParsedParameter, parse_interface_basics_from_docx
+from app.settings import TEMPLATE_DIR
 
 router = APIRouter(prefix="/imports")
 templates = Jinja2Templates(directory="app/templates")
-
-TEMPLATE_DIR = Path("data/templates")
 
 
 @router.post("/spec")
